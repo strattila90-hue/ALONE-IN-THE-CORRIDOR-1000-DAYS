@@ -2710,21 +2710,21 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
             const level = getWeaponLevel(w.id);
             const upgradeCost = getWeaponUpgradeCost(base);
             const card = document.createElement('div');
-            card.className = \`shop-item \${owned ? 'owned' : ''} \${equipped ? 'equipped' : ''}\`;
-            card.innerHTML = \`
+            card.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
+            card.innerHTML = `
               <div>
-                <div class="item-name">MK.\${w.tier} // \${w.name} \${owned ? \`<span style="color:#67e8f9">[LV.\${level}/\${MAX_WEAPON_LEVEL}]</span>\` : ''}</div>
-                <div class="item-desc">\${w.desc}</div>
-                <div class="item-stats">Sebzés: \${w.damage} • Tűzgyorsaság: \${(1 / w.fireRate).toFixed(1)}/s • Hőtermelés: \${w.heatPerShot.toFixed(1)} • Áthatolás: \${w.pierce >= 99 ? '∞' : w.pierce}</div>
-                \${owned ? \`<div class="item-stats" style="color:#a5f3fc">Fejlesztés: +\${level * 18}% sebzés • +\${Math.round((1 - Math.pow(0.95, level)) * 100)}% tűzgyorsaság • -\${Math.round((1 - Math.pow(0.92, level)) * 100)}% hő</div>\` : ''}
+                <div class="item-name">MK.${w.tier} // ${w.name} ${owned ? `<span style="color:#67e8f9">[LV.${level}/${MAX_WEAPON_LEVEL}]</span>` : ''}</div>
+                <div class="item-desc">${w.desc}</div>
+                <div class="item-stats">Sebzés: ${w.damage} • Tűzgyorsaság: ${(1 / w.fireRate).toFixed(1)}/s • Hőtermelés: ${w.heatPerShot.toFixed(1)} • Áthatolás: ${w.pierce >= 99 ? '∞' : w.pierce}</div>
+                ${owned ? `<div class="item-stats" style="color:#a5f3fc">Fejlesztés: +${level * 18}% sebzés • +${Math.round((1 - Math.pow(0.95, level)) * 100)}% tűzgyorsaság • -${Math.round((1 - Math.pow(0.92, level)) * 100)}% hő</div>` : ''}
               </div>
               <div class="item-actions"></div>
-            \`;
+            `;
             const actions = card.querySelector('.item-actions');
             const btn = document.createElement('button');
             btn.type = 'button';
             if (owned) {
-              btn.className = \`buy-btn \${equipped ? 'selected' : 'equip'}\`;
+              btn.className = `buy-btn ${equipped ? 'selected' : 'equip'}`;
               btn.textContent = equipped ? 'AKTÍV FEGYVER' : 'KIVÁLASZTÁS';
               btn.disabled = equipped;
               btn.addEventListener('click', () => {
@@ -2739,7 +2739,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
               const upgradeBtn = document.createElement('button');
               upgradeBtn.type = 'button';
               upgradeBtn.className = 'buy-btn';
-              upgradeBtn.textContent = level >= MAX_WEAPON_LEVEL ? 'MAX FEJLESZTÉS' : \`FEJLESZTÉS +1 (\${upgradeCost} Cr)\`;
+              upgradeBtn.textContent = level >= MAX_WEAPON_LEVEL ? 'MAX FEJLESZTÉS' : `FEJLESZTÉS +1 (${upgradeCost} Cr)`;
               upgradeBtn.disabled = level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost;
               upgradeBtn.addEventListener('click', () => {
                 if (level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost) return;
@@ -2752,7 +2752,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
               actions.appendChild(upgradeBtn);
             } else {
               btn.className = 'buy-btn';
-              btn.textContent = \`MEGVÁSÁRLÁS (\${w.cost} Cr)\`;
+              btn.textContent = `MEGVÁSÁRLÁS (${w.cost} Cr)`;
               btn.disabled = state.coins < w.cost;
               btn.addEventListener('click', () => {
                 if (state.coins < w.cost) return;
