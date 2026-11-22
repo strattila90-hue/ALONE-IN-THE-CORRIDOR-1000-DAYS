@@ -1237,35 +1237,60 @@ html,body{overscroll-behavior:none}
         return c;
       }
 
+      function finishSprite(small, sc) {
+        const w = small.width, h = small.height, sctx = small.getContext('2d');
+        const img = sctx.getImageData(0, 0, w, h), d = img.data, s0 = new Uint8ClampedArray(d);
+        const isOut = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return true; const i = (y * w + x) * 4; return s0[i + 3] < 40 || (s0[i] < 30 && s0[i + 1] < 14 && s0[i + 2] < 24); };
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (isOut(x, y)) continue;
+          let k = 1, spec = false;
+          if (isOut(x - 1, y) || isOut(x, y - 1)) { k = 1.32; spec = ((x * 5 + y * 3) % 7) === 0; }
+          else if (isOut(x + 1, y) || isOut(x, y + 1)) k = 0.58;
+          else if (((x * 7 + y * 13) % 5) === 0) k = 0.8;
+          else if (((x * 3 + y * 11) % 9) === 0) k = 1.16;
+          if (spec) { d[i] = 255; d[i + 1] = 214; d[i + 2] = 220; }
+          else { d[i] = Math.min(255, s0[i] * k); d[i + 1] = Math.min(255, s0[i + 1] * k); d[i + 2] = Math.min(255, s0[i + 2] * k); }
+        }
+        sctx.putImageData(img, 0, 0);
+        const out = document.createElement('canvas');
+        out.width = w * sc; out.height = h * sc;
+        const o = out.getContext('2d'); o.imageSmoothingEnabled = false;
+        o.drawImage(small, 0, 0, w * sc, h * sc);
+        return out;
+      }
+
       function getHeroSprite(armorTier, walkFrame) {
         const key = `hero_${armorTier}_${walkFrame}`;
         if (spriteCache.has(key)) return spriteCache.get(key);
-        const palettes = [
-          { b: '#2b2118', s: '#d9822b', h: '#5a4a3a', v: '#7fe3c2', g: '#8a8f94' },
-          { b: '#33281c', s: '#e0a02f', h: '#4a4f55', v: '#9ff0d6', g: '#b5bcc4' },
-          { b: '#1f2a2e', s: '#d9822b', h: '#3a4a52', v: '#c8fff0', g: '#cfd6dc' },
-          { b: '#14181c', s: '#c4222f', h: '#2a3238', v: '#ffe14a', g: '#e8dcc4' }
+        const t = Math.min(armorTier, 3);
+        const PALS = [
+          { m: '#6b6f57', t: '#d9822b', p: '#3a3d30', g: '#7fe3c2' },
+          { m: '#56626c', t: '#e0a02f', p: '#2f373d', g: '#9ff0d6' },
+          { m: '#4a5a68', t: '#d9822b', p: '#262d33', g: '#7fd8ff' },
+          { m: '#4a3a40', t: '#c4222f', p: '#1c1618', g: '#ffb02e' }
         ];
-        const pal = palettes[Math.min(armorTier, palettes.length - 1)];
-        const legL = walkFrame === 1 ? 'h' : 'b';
-        const legR = walkFrame === 2 ? 'h' : 'b';
-        const matrix = [
-          '.....gggggg.....',
-          '....gvvvvvvg....',
-          '....gvvvvvvg....',
-          '....gggggggg....',
-          '...sshhhhhhss...',
-          '..sshhhhhhhhss..',
-          '..shhhbbbbhhhs..',
-          '..shhhbbbbhhhs..',
-          '...shhhhhhhhs...',
-          '....gggggggg....',
-          walkFrame === 1 ? '....' + legL + 'g....' + legR + 'g....' : '.....' + legL + 'g..' + legR + 'g.....',
-          walkFrame === 2 ? '....' + legL + 'g....' + legR + 'g....' : '.....' + legL + 'g..' + legR + 'g.....',
-          '....gg....gg....'
-        ];
-        if (walkFrame === 1) matrix.pop();
-        const sprite = buildPixelSprite(matrix, pal, 4);
+        const C = PALS[t], K = '#12040a', SK = '#c79a7a';
+        const small = document.createElement('canvas'); small.width = 20; small.height = 20;
+        const c = small.getContext('2d');
+        const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+        const L = (x1, y1, x2, y2, th, col) => {
+          const n = Math.max(1, Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)));
+          for (const [tt, cc] of [[th + 2, K], [th, col]]) for (let i = 0; i <= n; i++) R(Math.round(x1 + (x2 - x1) * i / n - tt / 2), Math.round(y1 + (y2 - y1) * i / n - tt / 2), tt, tt, cc);
+        };
+        const [bx, by, fx, fy] = [[8, 19, 12, 19], [6, 18, 14, 19], [10, 19, 11, 18]][walkFrame % 3];
+        L(9, 14, bx, by, 2, C.p); L(8, 9, 11, 11, 2, C.p);
+        R(4, 7, 4, 8, K); R(5, 8, 2, 6, C.p); R(5, 9, 2, 1, C.g); R(5, 11, 2, 1, C.g);
+        if (t >= 2) { R(3, 6, 2, 3, C.m); R(3, 14, 2, 2, C.m); }
+        R(7, 7, 7, 8, K); R(8, 8, 5, 6, C.m); R(9, 9, 3, 3, C.t); R(8, 13, 5, 1, C.p);
+        if (t === 3) R(10, 10, 2, 2, C.g);
+        L(12, 14, fx, fy, 2, C.m);
+        if (t >= 2) R(Math.round((12 + fx) / 2), 16, 1, 2, C.g);
+        if (t >= 1) { R(7, 6, 5, 3, K); R(8, 6, 4, 2, C.m); R(8, 6, 4, 1, C.t); }
+        R(8, 0, 7, 7, K); R(9, 1, 5, 5, C.m); R(11, 2, 4, 2, C.g); R(12, 4, 2, 1, SK); R(9, 6, 3, 1, K);
+        if (t === 3) { R(15, 1, 2, 2, '#fff7c0'); R(6, 5, 2, 2, C.t); }
+        L(11, 9, 15, 10, 2, C.m); R(15, 9, 2, 2, C.p);
+        const sprite = finishSprite(small, 3);
         spriteCache.set(key, sprite);
         return sprite;
       }
@@ -1277,9 +1302,9 @@ html,body{overscroll-behavior:none}
         const K = '#12040a', F = cfg.color, H = cfg.accent, B = '#eadfc2', P = '#e58fa0', Pd = '#a24a68', E = '#fff35c', S = '#8fd12b', M = '#6a0912', SK = '#c79a7a';
         const a = frame % 2, GW = 22, GH = 24;
         const sc = { boss: 7, brute: 4, carrier: 4, screamer: 4, larva: 3 }[typeKey] || 3;
-        const sp = document.createElement('canvas'); sp.width = GW * sc; sp.height = GH * sc;
+        const sp = document.createElement('canvas'); sp.width = GW; sp.height = GH;
         const c = sp.getContext('2d');
-        const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x) * sc, Math.round(y) * sc, Math.round(w) * sc, Math.round(h) * sc); };
+        const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
         const L = (x1, y1, x2, y2, t, col) => {
           const n = Math.max(1, Math.round(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1))));
           for (const [tt, cc] of [[t + 2, K], [t, col]]) for (let i = 0; i <= n; i++) R(x1 + (x2 - x1) * i / n - tt / 2, y1 + (y2 - y1) * i / n - tt / 2, tt, tt, cc);
@@ -1328,8 +1353,9 @@ html,body{overscroll-behavior:none}
           L(9, 15, 8 - a * 2, 22, 2, F); L(13, 15, 14 + a * 2, 22, 2, F);
           L(8, 10, 3, 17 + a, 2, F); claw(3, 17 + a); L(14, 10, 19, 17 + (1 - a), 2, F); claw(19, 17 + (1 - a)); ribs(11, 9, 6, 7); skull(11, 5);
         }
-        spriteCache.set(key, sp);
-        return sp;
+        const fin = finishSprite(sp, sc);
+        spriteCache.set(key, fin);
+        return fin;
       }
 
       const canvas = document.getElementById('gameCanvas');
@@ -1399,6 +1425,7 @@ html,body{overscroll-behavior:none}
         floatingTexts: [],
         decals: [],
         gibs: [],
+        corpses: [],
         wUp: {}, turretLevel: 0, turretY: 300, turretCd: 0, turretFlash: 0,
         rainDrops: []
       };
@@ -1505,6 +1532,7 @@ html,body{overscroll-behavior:none}
         state.floatingTexts = [];
         state.decals = [];
         state.gibs = [];
+        state.corpses = [];
         state.wUp = {}; state.turretLevel = 0; state.turretCd = 0; state.turretFlash = 0; state.turretY = state.height * 0.55;
         state.player.x = Math.max(68, Math.floor(getBarricadeX() * 0.46));
         state.player.y = Math.floor(state.height * 0.58);
@@ -1708,6 +1736,8 @@ html,body{overscroll-behavior:none}
         // Stilizált, idegen nyálkaeffektus – nem naturális találati látvány.
         addDecal(enemy.x, enemy.y + enemy.radius * 0.65, Math.random() < 0.55 ? '#5a0e16' : '#4a7a12', Math.min(34, enemy.radius * 1.3));
         spawnGibs(enemy, enemy.isBoss ? 28 : (enemy.radius >= 20 ? 13 : 7));
+        state.corpses.push({ sp: getEnemySprite(enemy.typeKey, enemy.animFrame), x: enemy.x, y: enemy.y, r: enemy.radius, life: 9 });
+        if (state.corpses.length > 14) state.corpses.shift();
         spawnParticles(enemy.x, enemy.y, 10, '#a3121f', 60, 280, 0.5, 4);
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 42 : 16, enemy.accent || '#84cc16', 55, 260, 0.52, 4.5);
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 22 : 7, '#84cc16', 25, 130, 0.62, 5);
@@ -1923,6 +1953,12 @@ html,body{overscroll-behavior:none}
             AudioEngine.playTone(520, 140, 0.05, 'square', 0.04);
           }
         }
+        state.growlT = (state.growlT || 0) - dt;
+        if (state.growlT <= 0 && state.enemies.length) { AudioEngine.playMonsterGrowl(); state.growlT = 4 + Math.random() * 5; }
+        if (state.hp < state.maxHp * 0.3) {
+          state.hbT = (state.hbT || 0) - dt;
+          if (state.hbT <= 0) { AudioEngine.playTone(60, 38, 0.16, 'sine', 0.14); AudioEngine.playTone(60, 38, 0.12, 'sine', 0.1, 0.18); state.hbT = 0.9; }
+        }
         state.spawnTimer -= dt;
         if (state.spawnTimer <= 0 && state.enemies.length < 7 + state.wave * 2) {
           spawnEnemy();
@@ -2128,6 +2164,7 @@ html,body{overscroll-behavior:none}
       }
 
       function updateParticlesAndTexts(dt) {
+        for (let i = state.corpses.length - 1; i >= 0; i--) { state.corpses[i].life -= dt; if (state.corpses[i].life <= 0) state.corpses.splice(i, 1); }
         for (const g of state.gibs) {
           if (g.landed) continue;
           g.vz -= 900 * dt; g.z += g.vz * dt; g.x += g.vx * dt; g.gy += g.vg * dt;
@@ -2453,6 +2490,13 @@ html,body{overscroll-behavior:none}
           ctx.restore();
         }
 
+        for (const cp of state.corpses) {
+          const ch = cp.sp.height * 0.24;
+          ctx.globalAlpha = Math.min(0.85, cp.life / 3);
+          ctx.drawImage(cp.sp, Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
+          ctx.fillStyle = 'rgba(60,0,10,.55)'; ctx.fillRect(Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
+        }
+        ctx.globalAlpha = 1;
         for (const g of state.gibs) {
           const s = g.s, gx = g.x, gy = g.gy - g.z;
           ctx.fillStyle = '#1a050a'; ctx.fillRect(gx - s / 2 - 1, gy - s / 2 - 1, s + 2, s + 2);
@@ -2636,7 +2680,20 @@ html,body{overscroll-behavior:none}
         ctx.ellipse(enemy.x, enemy.y + enemy.radius + 4, enemy.radius * 0.85, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.drawImage(sprite, Math.round(enemy.x - sprite.width * 0.5), Math.round(enemy.y - sprite.height * 0.55));
+        const br = 1 + Math.sin(state.time * 5 + enemy.y * 0.07) * 0.035;
+        const tw = Math.sin(state.time * 31 + enemy.y) > 0.965 ? 3 : 0;
+        const dh = sprite.height * br, dx = Math.round(enemy.x - sprite.width * 0.5) + tw, dy = Math.round(enemy.y - sprite.height * 0.55 + sprite.height - dh);
+        ctx.drawImage(sprite, dx, dy, sprite.width, dh);
+        ctx.globalAlpha = 0.22 + 0.14 * Math.sin(state.time * 7 + enemy.x * 0.1);
+        ctx.fillStyle = enemy.typeKey === 'wraith' ? '#7ff' : (enemy.typeKey === 'bomber' ? '#ffb02e' : '#ff3b2e');
+        ctx.fillRect(enemy.x - 7, enemy.y - sprite.height * 0.27, 14, 5);
+        ctx.globalAlpha = 1;
+        if (enemy.hp < enemy.maxHp * 0.5) {
+          ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sprite.width * 0.3, dy + sprite.height * 0.45, 7, 6);
+          ctx.fillStyle = '#d02a3a'; ctx.fillRect(dx + sprite.width * 0.3 + 1, dy + sprite.height * 0.45 + 1, 4, 3);
+          if (enemy.hp < enemy.maxHp * 0.25) { ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sprite.width * 0.6, dy + sprite.height * 0.3, 6, 7); ctx.fillStyle = '#e8dcc4'; ctx.fillRect(dx + sprite.width * 0.6 + 1, dy + sprite.height * 0.3 + 2, 3, 1); }
+        }
+        if (!state.paused && state.running && Math.random() < state.dt * 1.5 && enemy.x < state.width) addDecal(enemy.x + (Math.random() - 0.5) * 8, enemy.y + enemy.radius, Math.random() < 0.5 ? '#4a0b12' : '#3f6a10', 5);
         if (enemy.hitFlash > 0) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
           ctx.beginPath();
