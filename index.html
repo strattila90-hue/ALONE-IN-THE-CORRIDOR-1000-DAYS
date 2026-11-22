@@ -822,6 +822,57 @@
           shake: 5.5,
           color: '#e879f9',
           desc: 'A képernyő teljes szélességén áthatoló elektromágneses csúcsfegyver.'
+        },
+        {
+          id: 'arc_lance',
+          name: 'Viharív Tesla-lándzsa',
+          tier: 6,
+          cost: 980,
+          damage: 58,
+          fireRate: 0.34,
+          heatPerShot: 13,
+          pellets: 1,
+          spread: 0.015,
+          speed: 1380,
+          splash: 0,
+          pierce: 5,
+          shake: 1.8,
+          color: '#67e8f9',
+          desc: 'Kék elektromos impulzus, amely több idegen célponton is áthalad.'
+        },
+        {
+          id: 'cryo_burst',
+          name: 'Glaciális Szilánkvető',
+          tier: 7,
+          cost: 1280,
+          damage: 32,
+          fireRate: 0.42,
+          heatPerShot: 9,
+          pellets: 4,
+          spread: 0.22,
+          speed: 920,
+          splash: 0,
+          pierce: 2,
+          shake: 1.2,
+          color: '#a5f3fc',
+          desc: 'Négy jeges energiakristályt szór szét, hideg fényű becsapódásokkal.'
+        },
+        {
+          id: 'singularity',
+          name: 'Nullpont Szingularitás',
+          tier: 8,
+          cost: 1850,
+          damage: 185,
+          fireRate: 0.92,
+          heatPerShot: 28,
+          pellets: 1,
+          spread: 0,
+          speed: 470,
+          splash: 158,
+          pierce: 1,
+          shake: 6.5,
+          color: '#c084fc',
+          desc: 'Lassú gravitációs gömb, amely becsapódáskor lila energiagyűrűt robbant.'
         }
       ];
 
@@ -1419,7 +1470,7 @@
         for (let i = 0; i < w.pellets; i++) {
           const angle = aimAngle + (Math.random() - 0.5) * w.spread;
           state.projectiles.push({
-            kind: w.id === 'plasma_cannon' ? 'plasma' : (w.id === 'pulse_rifle' ? 'pulse' : 'bullet'),
+            kind: ['plasma_cannon', 'singularity'].includes(w.id) ? 'plasma' : (['pulse_rifle', 'arc_lance', 'cryo_burst'].includes(w.id) ? 'pulse' : 'bullet'),
             x: muzzleX, y: muzzleY,
             vx: Math.cos(angle) * w.speed, vy: Math.sin(angle) * w.speed,
             damage: w.damage, splash: w.splash, pierceLeft: w.pierce,
@@ -1459,8 +1510,10 @@
         state.kills++;
         state.waveKills++;
         state.score += enemy.xp * 10;
-        addDecal(enemy.x, enemy.y + enemy.radius * 0.65, 'rgba(136, 19, 55, 0.45)', Math.min(26, enemy.radius * 0.9));
-        spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 36 : 12, enemy.color, 50, 240, 0.45, 4);
+        // Stilizált, idegen nyálkaeffektus – nem naturális találati látvány.
+        addDecal(enemy.x, enemy.y + enemy.radius * 0.65, 'rgba(132, 204, 22, 0.32)', Math.min(30, enemy.radius * 1.05));
+        spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 42 : 16, enemy.accent || '#84cc16', 55, 260, 0.52, 4.5);
+        spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 22 : 7, '#84cc16', 25, 130, 0.62, 5);
 
         if (enemy.typeKey === 'carrier') {
           for (let i = 0; i < 3; i++) {
@@ -1797,6 +1850,8 @@
           }
         }
 
+        // A kreditjellegű zsákmány automatikusan a játékoshoz húzódik;
+        // az egész pályán belül felveszi, a gyógyító és pajzstöltő tárgyak megmaradnak külön pickupnak.
         const magnetRadius = 75 + state.magnetLevel * 55;
         for (let i = state.pickups.length - 1; i >= 0; i--) {
           const pk = state.pickups[i];
@@ -1811,11 +1866,14 @@
           const dx = state.player.x - pk.x;
           const dy = state.player.y - pk.y;
           const dist = Math.hypot(dx, dy);
-          if (dist < magnetRadius && dist > 1) {
-            pk.x += (dx / dist) * 260 * dt;
-            pk.y += (dy / dist) * 260 * dt;
+          const isCurrency = pk.kind === 'blood_shard' || pk.kind === 'coin_gold' || pk.kind === 'coin_bronze';
+          const pullRadius = isCurrency ? Math.hypot(state.width, state.height) : magnetRadius;
+          const pullSpeed = isCurrency ? 760 : 260;
+          if (dist < pullRadius && dist > 1) {
+            pk.x += (dx / dist) * pullSpeed * dt;
+            pk.y += (dy / dist) * pullSpeed * dt;
           }
-          if (dist < 28) {
+          if (dist < 34) {
             AudioEngine.playPickup(pk.kind);
             if (pk.kind === 'medkit') {
               state.hp = Math.min(state.maxHp, state.hp + pk.value);
