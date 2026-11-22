@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  ⚠️ AI ASSISTANTS: READ AGENTS.md FIRST. This is the owner's accepted baseline.
+  Modify ONLY to improve it; never remove features or change the main direction
+  (retro pixel-art tech-noir horror, abandoned cargo ship, gore, hybrid monsters, PWA, Hungarian UI).
+  Bump CACHE_NAME in sw.js on every change.
+-->
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
@@ -702,6 +708,13 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
 .hero-title{color:#e8dcc4;text-shadow:3px 3px 0 #7a1018,6px 6px 0 #000}
 .start-btn{background:repeating-linear-gradient(-45deg,#8c1520 0 10px,#5e0d15 10px 20px);border-color:#000}
 #desktop-hint{border-radius:0;border:2px solid #000;background:rgba(10,6,4,.85)}
+.pause-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.pause-grid .start-btn{grid-column:1/3}
+html,body{overscroll-behavior:none}
+#game-root{height:100vh;height:100dvh}
+#hud-top,#right-action-pad,.modal-card,.hero-card,#boss-hud{zoom:var(--ui,1)}
+.modal-card{max-width:calc(96vw / var(--ui,1));max-height:calc(92vh / var(--ui,1))}
+.tactile-btn{min-height:34px}.pad-btn{min-height:40px}
+@media (max-width:520px),(max-height:430px){#btn-diag,#btn-refresh{display:none}}
 </style>
 </head>
 <body>
@@ -754,11 +767,13 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         </div>
 
         <button class="tactile-btn" id="btn-open-shop" type="button">
-          ☰ MENÜ / BOLT
+          ☰ FEGYVERTÁR
           <span class="badge-alert" id="shop-badge">!</span>
         </button>
 
         <button class="tactile-btn active" id="btn-audio" type="button" title="Hang / Zene">🔊</button>
+        <button class="tactile-btn" id="btn-pause" type="button" title="Szünet (P)">⏸</button>
+        <button class="tactile-btn" id="btn-refresh" type="button" title="Frissítés">⟳</button>
         <button class="tactile-btn" id="btn-diag" type="button" title="Diagnosztika">📊</button>
       </div>
     </div>
@@ -801,12 +816,26 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         </div>
 
         <div class="tab-bar">
-          <button class="tab-btn active" data-tab="weapons" type="button">🔫 FEGYVEREK</button>
+          <button class="tab-btn active" data-tab="weapons" type="button">🔫 FEGYVERTÁR</button>
           <button class="tab-btn" data-tab="armor" type="button">🛡️ PÁNCÉLZAT &amp; EXOSUIT</button>
           <button class="tab-btn" data-tab="barricade" type="button">🚧 BARIKÁD &amp; RENDSZEREK</button>
         </div>
 
         <div class="modal-body" id="modal-items"></div>
+      </div>
+    </div>
+
+    <div class="overlay-screen" id="pause-screen">
+      <div class="hero-card">
+        <h2 class="hero-title">SZÜNET</h2>
+        <div class="pause-grid">
+          <button class="start-btn" id="btn-resume" type="button">▶ FOLYTATÁS</button>
+          <button class="pad-btn" id="btn-pause-armory" type="button">🔫 FEGYVERTÁR</button>
+          <button class="pad-btn" id="btn-refresh2" type="button">⟳ FRISSÍTÉS</button>
+          <button class="pad-btn" id="btn-ui-minus" type="button">MÉRET −</button>
+          <button class="pad-btn" id="btn-ui-plus" type="button">MÉRET +</button>
+          <button class="pad-btn" id="btn-restart2" type="button">↻ ÚJRAKEZDÉS</button>
+        </div>
       </div>
     </div>
 
@@ -1029,15 +1058,15 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       ];
 
       const ENEMY_TYPES = {
-        swarmer: { name: 'Gyors Rajzó', hp: 34, speed: 132, dmg: 10, barDmg: 12, radius: 13, reward: 12, xp: 10, spitType: null, color: '#ef4444', accent: '#fca5a5' },
-        spitter: { name: 'Savköpő', hp: 58, speed: 74, dmg: 14, barDmg: 14, radius: 16, reward: 20, xp: 16, spitType: 'acid', color: '#84cc16', accent: '#bef264' },
-        brute: { name: 'Páncélozott Gólem', hp: 195, speed: 44, dmg: 26, barDmg: 34, radius: 24, reward: 42, xp: 32, spitType: null, color: '#7c3aed', accent: '#c4b5fd' },
-        stalker: { name: 'Csontkaszás Vadász', hp: 76, speed: 158, dmg: 18, barDmg: 22, radius: 16, reward: 26, xp: 22, spitType: null, color: '#e11d48', accent: '#fda4af' },
-        carrier: { name: 'Lárvahordozó', hp: 125, speed: 56, dmg: 15, barDmg: 18, radius: 21, reward: 35, xp: 28, spitType: 'egg', color: '#b91c1c', accent: '#f87171' },
-        larva: { name: 'Bio-Lárva', hp: 18, speed: 185, dmg: 8, barDmg: 6, radius: 9, reward: 6, xp: 6, spitType: null, color: '#f97316', accent: '#fed7aa' },
-        wraith: { name: 'Fázis-Lidérc', hp: 92, speed: 96, dmg: 16, barDmg: 10, radius: 17, reward: 32, xp: 25, spitType: 'phase', color: '#a855f7', accent: '#e9d5ff' },
-        bomber: { name: 'Savbomba Mutáns', hp: 64, speed: 112, dmg: 28, barDmg: 48, radius: 17, reward: 24, xp: 20, spitType: null, color: '#eab308', accent: '#fef08a' },
-        screamer: { name: 'Pszicho-Sikoltó', hp: 110, speed: 62, dmg: 15, barDmg: 16, radius: 19, reward: 38, xp: 30, spitType: 'sonic', color: '#ec4899', accent: '#fbcfe8' },
+        swarmer: { name: 'Hosszúkarú Kúszó', hp: 34, speed: 132, dmg: 10, barDmg: 12, radius: 13, reward: 12, xp: 10, spitType: null, color: '#ef4444', accent: '#fca5a5' },
+        spitter: { name: 'Agyköpő', hp: 58, speed: 74, dmg: 14, barDmg: 14, radius: 16, reward: 20, xp: 16, spitType: 'acid', color: '#84cc16', accent: '#bef264' },
+        brute: { name: 'Hibrid Gólem', hp: 195, speed: 44, dmg: 26, barDmg: 34, radius: 24, reward: 42, xp: 32, spitType: null, color: '#7c3aed', accent: '#c4b5fd' },
+        stalker: { name: 'Csontvázas Vadász', hp: 76, speed: 158, dmg: 18, barDmg: 22, radius: 16, reward: 26, xp: 22, spitType: null, color: '#e11d48', accent: '#fda4af' },
+        carrier: { name: 'Méhlény Hordozó', hp: 125, speed: 56, dmg: 15, barDmg: 18, radius: 21, reward: 35, xp: 28, spitType: 'egg', color: '#b91c1c', accent: '#f87171' },
+        larva: { name: 'Agyvelő-Béka', hp: 18, speed: 185, dmg: 8, barDmg: 6, radius: 9, reward: 6, xp: 6, spitType: null, color: '#f97316', accent: '#fed7aa' },
+        wraith: { name: 'Arctalan Lidérc', hp: 92, speed: 96, dmg: 16, barDmg: 10, radius: 17, reward: 32, xp: 25, spitType: 'phase', color: '#a855f7', accent: '#e9d5ff' },
+        bomber: { name: 'Légy-Ember Bomba', hp: 64, speed: 112, dmg: 28, barDmg: 48, radius: 17, reward: 24, xp: 20, spitType: null, color: '#eab308', accent: '#fef08a' },
+        screamer: { name: 'Sikoltó Szájbarlang', hp: 110, speed: 62, dmg: 15, barDmg: 16, radius: 19, reward: 38, xp: 30, spitType: 'sonic', color: '#ec4899', accent: '#fbcfe8' },
         boss: { name: 'LEVIATHAN HORROR', hp: 1650, speed: 34, dmg: 32, barDmg: 45, radius: 44, reward: 260, xp: 180, spitType: 'boss', color: '#dc2626', accent: '#38bdf8', isBoss: true }
       };
 
@@ -1242,94 +1271,63 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       }
 
       function getEnemySprite(typeKey, frame) {
-        const key = `enemy_detail_${typeKey}_${frame}`;
+        const key = `enemy_${typeKey}_${frame}`;
         if (spriteCache.has(key)) return spriteCache.get(key);
         const cfg = ENEMY_TYPES[typeKey] || ENEMY_TYPES.swarmer;
-        const sp = document.createElement('canvas');
-        sp.width = 128;
-        sp.height = 128;
+        const K = '#12040a', F = cfg.color, H = cfg.accent, B = '#eadfc2', P = '#e58fa0', Pd = '#a24a68', E = '#fff35c', S = '#8fd12b', M = '#6a0912', SK = '#c79a7a';
+        const a = frame % 2, GW = 22, GH = 24;
+        const sc = { boss: 7, brute: 4, carrier: 4, screamer: 4, larva: 3 }[typeKey] || 3;
+        const sp = document.createElement('canvas'); sp.width = GW * sc; sp.height = GH * sc;
         const c = sp.getContext('2d');
-        const cx = 64, cy = 65;
-        const pulse = frame % 2 ? 1.035 : 0.97;
-        const body = c.createRadialGradient(48, 42, 5, 64, 66, 62);
-        body.addColorStop(0, cfg.accent);
-        body.addColorStop(0.28, cfg.color);
-        body.addColorStop(0.76, '#17151d');
-        body.addColorStop(1, '#05060a');
-        c.save();
-        c.translate(cx, cy);
-        c.scale(pulse, 1 / pulse);
-        c.shadowColor = cfg.color;
-        c.shadowBlur = typeKey === 'boss' ? 22 : 10;
-        c.fillStyle = body;
-        c.beginPath();
-        c.ellipse(0, 2, typeKey === 'boss' ? 48 : 34, typeKey === 'boss' ? 53 : 42, 0, 0, Math.PI * 2);
-        c.fill();
-        c.shadowBlur = 0;
-        // Organic armor plates and ridges
-        for (let j = 0; j < 5; j++) {
-          const yy = -27 + j * 13;
-          c.strokeStyle = j % 2 ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.48)';
-          c.lineWidth = j % 2 ? 2 : 5;
-          c.beginPath();
-          c.moveTo(-25 + Math.sin(j) * 4, yy);
-          c.quadraticCurveTo(0, yy - 8, 25 - Math.cos(j) * 4, yy + 2);
-          c.stroke();
+        const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x) * sc, Math.round(y) * sc, Math.round(w) * sc, Math.round(h) * sc); };
+        const L = (x1, y1, x2, y2, t, col) => {
+          const n = Math.max(1, Math.round(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1))));
+          for (const [tt, cc] of [[t + 2, K], [t, col]]) for (let i = 0; i <= n; i++) R(x1 + (x2 - x1) * i / n - tt / 2, y1 + (y2 - y1) * i / n - tt / 2, tt, tt, cc);
+        };
+        const claw = (x, y) => { R(x - 1, y, 1, 2, B); R(x, y, 1, 2, B); R(x + 1, y, 1, 2, B); };
+        const brain = (cx, cy, r) => { R(cx - r - 1, cy - r, 2 * r + 2, 2 * r + 1, K); R(cx - r, cy - r + 1, 2 * r, 2 * r - 1, P); R(cx - r + 1, cy - r + 2, 2 * r - 2, 1, Pd); R(cx - 1, cy - r + 1, 1, 2 * r - 2, Pd); R(cx - r + 1, cy - r + 1, 2, 1, '#f6c4d0'); };
+        const skull = (cx, cy) => { R(cx - 4, cy - 4, 8, 8, K); R(cx - 3, cy - 3, 6, 5, B); R(cx - 3, cy - 2, 2, 2, K); R(cx + 1, cy - 2, 2, 2, K); R(cx - 3, cy - 2, 1, 1, E); R(cx + 2, cy - 2, 1, 1, E); R(cx - 3, cy + 2, 6, 2, K); for (let i = -3; i < 3; i += 2) R(cx + i, cy + 2, 1, 2, B); };
+        const face = (cx, cy) => { R(cx - 4, cy - 4, 8, 9, K); R(cx - 3, cy - 3, 6, 7, SK); R(cx - 2, cy - 1, 2, 1, K); R(cx + 1, cy - 1, 2, 2, E); R(cx - 2, cy + 2, 5, 1, M); R(cx - 1, cy + 2, 1, 1, B); R(cx + 1, cy + 2, 1, 1, B); };
+        const ribs = (cx, y, w, h) => { R(cx - w / 2 - 1, y, w + 2, h, K); R(cx - w / 2, y, w, h, F); for (let i = 1; i < h - 1; i += 2) R(cx - w / 2 + 1, y + i, w - 2, 1, B); R(cx, y, 1, h, M); };
+        if (typeKey === 'spitter') {
+          L(9, 13, 3, 17 - a, 1, F); L(9, 14, 4, 22, 1, F); L(13, 13, 19, 17 + a, 1, F); L(13, 14, 18, 22, 1, F);
+          ribs(11, 11, 4, 6); R(7, 8, 8, 4, K); R(8, 9, 6, 2, M); R(8, 9, 1, 1, B); R(10, 9, 1, 1, B); R(12, 9, 1, 1, B); R(10, 11, 1, 4 + a, S); brain(11, 5, 4); R(9, 5, 1, 1, E); R(13, 5, 1, 1, E);
+        } else if (typeKey === 'brute') {
+          L(9, 16, 8, 22, 3, F); L(13, 16, 14, 22, 3, F); R(4, 7, 14, 10, K); R(5, 8, 12, 8, F); R(5, 8, 5, 3, H);
+          R(9, 10, 5, 6, K); R(10, 11, 3, 1, B); R(10, 13, 3, 1, B); L(5, 9, 2, 18 + a, 4, F); L(17, 9, 20, 18 + (1 - a), 4, F); claw(2, 18 + a); claw(20, 18 + (1 - a));
+          R(8, 3, 6, 6, K); R(9, 4, 4, 4, SK); R(9, 5, 1, 1, K); R(11, 5, 2, 1, E); R(9, 8, 4, 1, M); R(6, 6, 1, 2, B); R(15, 6, 1, 2, B); R(11, 2, 1, 2, B);
+        } else if (typeKey === 'stalker') {
+          L(10, 16, 8, 19, 2, F); L(8, 19, 10 - a * 2, 23, 1, F); L(12, 16, 14, 19, 2, F); L(14, 19, 12 + a * 2, 23, 1, F);
+          L(9, 11, 2, 20 + a, 1, F); claw(2, 20 + a); L(13, 11, 20, 20 + (1 - a), 1, F); claw(20, 20 + (1 - a));
+          R(10, 9, 2, 2, F); ribs(11, 11, 4, 5); skull(11, 5); L(8, 3, 5, 0, 1, B); L(14, 3, 17, 0, 1, B);
+        } else if (typeKey === 'carrier') {
+          L(8, 19, 7, 23, 2, F); L(14, 19, 15 + a, 23, 2, F); L(4, 12, 1, 17 + a, 1, F); L(18, 12, 21, 17 + a, 1, F);
+          R(3, 9, 16, 11, K); R(4, 10, 14, 9, P); R(6, 12, 3, 3, Pd); R(11, 13, 3, 3, Pd); R(14, 11, 2, 2, Pd); R(8, 16, 3, 2, Pd); R(10, 10, 1, 9, M); face(11, 5);
+        } else if (typeKey === 'larva') {
+          L(6, 15, 3, 20, 2, F); L(3, 20, 1 + a, 22, 1, F); L(16, 15, 19, 20, 2, F); L(19, 20, 21 - a, 22, 1, F); brain(11, 12, 6); R(7, 7, 2, 2, E); R(14, 7, 2, 2, E); R(8, 12, 6, 2, M);
+        } else if (typeKey === 'wraith') {
+          L(10, 15, 8, 23, 1, F); L(11, 15, 11, 23, 1, F); L(12, 15, 14 + a, 23, 1, F);
+          L(10, 9, 2, 21 + a, 1, F); claw(2, 21 + a); L(12, 9, 20, 21 - a, 1, F); claw(20, 21 - a);
+          R(9, 8, 5, 8, K); R(10, 8, 3, 7, F); R(10, 2, 3, 7, K); R(10, 3, 2, 5, '#b8a8c8'); R(10, 6, 2, 1, K);
+        } else if (typeKey === 'bomber') {
+          R(2, 5, 6, 6, 'rgba(200,230,255,.55)'); R(14, 5, 6, 6, 'rgba(200,230,255,.55)');
+          L(8, 18, 5, 22, 1, F); L(14, 18, 17, 22, 1, F); L(9, 19, 8 + a, 23, 1, F); L(13, 19, 14 - a, 23, 1, F);
+          R(6, 11, 10, 9, K); R(7, 12, 8, 7, '#d9b02f'); R(9, 13, 4, 4, '#fff35c'); face(11, 6); R(8, 5, 2, 2, '#c4222f'); R(12, 5, 2, 2, '#c4222f');
+        } else if (typeKey === 'screamer') {
+          L(10, 18, 9, 23, 1, F); L(12, 18, 13 + a, 23, 1, F); L(8, 13, 2, 7 + a, 1, F); L(14, 13, 19, 7 + (1 - a), 1, F); ribs(11, 12, 4, 6);
+          R(6, 2, 10, 10, K); R(7, 3, 8, 8, F); R(8, 5, 6, 5, M); for (let i = 0; i < 3; i++) { R(8 + i * 2, 5, 1, 2, B); R(8 + i * 2, 8, 1, 2, B); }
+          R(7, 3, 2, 1, E); R(13, 3, 2, 1, E); R(10, 3, 2, 1, E);
+        } else if (typeKey === 'boss') {
+          for (let i = 0; i < 5; i++) {
+            const y = 13 + i * 2, w2 = 12 - i, x0 = 11 - w2 / 2;
+            L(x0, y + 1, x0 - 3 - a * (i % 2), y + 3, 1, B); L(x0 + w2, y + 1, x0 + w2 + 3 + a * (1 - i % 2), y + 3, 1, B);
+            R(x0 - 1, y, w2 + 2, 3, K); R(x0, y, w2, 2, F); R(x0 + 1, y, w2 - 2, 1, H);
+          }
+          R(7, 8, 8, 6, K); R(8, 9, 3, 4, B); R(11, 9, 3, 4, SK); R(8, 12, 6, 1, M); R(9, 10, 1, 1, E); R(12, 10, 2, 2, E); brain(11, 4, 4); R(2, 0, 1, 4, B); R(19, 0, 1, 4, B);
+        } else {
+          L(9, 15, 8 - a * 2, 22, 2, F); L(13, 15, 14 + a * 2, 22, 2, F);
+          L(8, 10, 3, 17 + a, 2, F); claw(3, 17 + a); L(14, 10, 19, 17 + (1 - a), 2, F); claw(19, 17 + (1 - a)); ribs(11, 9, 6, 7); skull(11, 5);
         }
-        // Side limbs / tendrils
-        c.strokeStyle = '#090a0e';
-        c.lineWidth = typeKey === 'boss' ? 11 : 7;
-        c.lineCap = 'round';
-        for (const side of [-1, 1]) {
-          c.beginPath();
-          c.moveTo(side * 23, 10);
-          c.quadraticCurveTo(side * 49, 18, side * 43, 43 + (frame ? 3 : 0));
-          c.stroke();
-          c.strokeStyle = cfg.color;
-          c.lineWidth = 2;
-          c.beginPath();
-          c.moveTo(side * 24, 11);
-          c.quadraticCurveTo(side * 43, 20, side * 40, 37);
-          c.stroke();
-          c.strokeStyle = '#090a0e';
-          c.lineWidth = typeKey === 'boss' ? 11 : 7;
-        }
-        // Face cavity and luminous eyes
-        c.fillStyle = 'rgba(0,0,0,.82)';
-        c.beginPath();
-        c.ellipse(0, -9, 22, 18, 0, 0, Math.PI * 2);
-        c.fill();
-        const eyeGlow = c.createRadialGradient(0, -13, 1, 0, -13, 19);
-        eyeGlow.addColorStop(0, '#fff');
-        eyeGlow.addColorStop(0.15, cfg.accent);
-        eyeGlow.addColorStop(0.5, cfg.color);
-        eyeGlow.addColorStop(1, 'rgba(0,0,0,0)');
-        c.fillStyle = eyeGlow;
-        c.beginPath();
-        c.ellipse(-10, -13, 7, 5, -0.2, 0, Math.PI * 2);
-        c.ellipse(10, -13, 7, 5, 0.2, 0, Math.PI * 2);
-        c.fill();
-        c.fillStyle = '#050509';
-        c.beginPath();
-        c.ellipse(-10, -13, 2, 4, 0, 0, Math.PI * 2);
-        c.ellipse(10, -13, 2, 4, 0, 0, Math.PI * 2);
-        c.fill();
-        // Surface speckles and rim lighting
-        for (let k = 0; k < 28; k++) {
-          const ang = k * 2.399;
-          const rr = 15 + (k % 7) * 3.5;
-          c.fillStyle = k % 3 ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.28)';
-          c.beginPath();
-          c.arc(Math.cos(ang) * rr, Math.sin(ang) * rr + 2, 1 + (k % 3), 0, Math.PI * 2);
-          c.fill();
-        }
-        c.restore();
-        // Soft atmospheric halo
-        const halo = c.createRadialGradient(cx, cy, 34, cx, cy, 63);
-        halo.addColorStop(0, 'rgba(0,0,0,0)');
-        halo.addColorStop(1, cfg.color + '00');
-        c.fillStyle = halo;
-        c.fillRect(0, 0, 128, 128);
         spriteCache.set(key, sp);
         return sp;
       }
@@ -1339,7 +1337,10 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       const realCtx = ctx;
       const buf = document.createElement('canvas');
       const bctx = buf.getContext('2d');
-      let PX = 3;
+      let PX = 3, CW = 1280, CH = 720, Z = 1;
+      let uiScale = 1;
+      try { const sv = parseFloat(localStorage.getItem('c1k_ui')); uiScale = sv > 0 ? sv : (window.matchMedia('(hover:hover) and (pointer:fine)').matches ? 0.7 : 1); } catch (_) {}
+      function applyUi() { document.getElementById('game-root').style.setProperty('--ui', uiScale); }
 
       const state = {
         running: false,
@@ -1366,7 +1367,6 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         kills: 0,
         score: 0,
         unlockedWeapons: ['pipe_shotgun'],
-        weaponLevels: {},
         currentWeaponId: 'pipe_shotgun',
         weaponHeat: 0,
         fireCooldown: 0,
@@ -1399,32 +1399,11 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         floatingTexts: [],
         decals: [],
         gibs: [],
+        wUp: {}, turretLevel: 0, turretY: 300, turretCd: 0, turretFlash: 0,
         rainDrops: []
       };
 
-      const MAX_WEAPON_LEVEL = 5;
-      function getWeaponLevel(id) { return Math.max(0, Math.min(MAX_WEAPON_LEVEL, Number(state.weaponLevels?.[id] || 0))); }
-      function getWeaponUpgradeCost(w) {
-        const level = getWeaponLevel(w.id);
-        return Math.round(70 + w.tier * 38 + level * level * 95);
-      }
-      function getWeaponStats(w) {
-        const level = getWeaponLevel(w.id);
-        return {
-          ...w,
-          level,
-          damage: Math.round(w.damage * (1 + level * 0.18)),
-          fireRate: Math.max(0.035, w.fireRate * Math.pow(0.95, level)),
-          heatPerShot: Math.max(0.8, w.heatPerShot * Math.pow(0.92, level)),
-          speed: w.speed * (1 + level * 0.035),
-          splash: w.splash > 0 ? w.splash * (1 + level * 0.12) : 0,
-          pierce: w.pierce >= 99 ? 99 : w.pierce + (level >= 3 ? 1 : 0) + (level >= 5 ? 1 : 0)
-        };
-      }
-      function getCurrentWeapon() {
-        const base = WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0];
-        return getWeaponStats(base);
-      }
+      function getCurrentWeapon() { return WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0]; }
       function getArmorConfig() { return ARMOR_TIERS[Math.min(state.armorTier, ARMOR_TIERS.length - 1)]; }
       function getBarricadeX() { return Math.max(195, Math.min(state.width * 0.27, 330)); }
 
@@ -1447,20 +1426,22 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         const rect = document.getElementById('game-root').getBoundingClientRect();
         const w = Math.max(320, Math.floor(rect.width || window.innerWidth || 960));
         const h = Math.max(240, Math.floor(rect.height || window.innerHeight || 540));
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        state.width = w;
-        state.height = h;
+        const dpr = 1;
+        Z = Math.max(0.5, Math.min(1.6, uiScale * Math.max(0.8, Math.min(1.3, h / 600))));
+        CW = w; CH = h;
+        state.width = Math.floor(w / Z);
+        state.height = Math.floor(h / Z);
         state.dpr = dpr;
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.imageSmoothingEnabled = false;
-        PX = Math.max(2, Math.round(h / 240));
-        buf.width = Math.ceil(w / PX);
-        buf.height = Math.ceil(h / PX);
+        PX = Math.max(1, Math.round(state.height / 240));
+        buf.width = Math.ceil(state.width / PX);
+        buf.height = Math.ceil(state.height / PX);
         bctx.imageSmoothingEnabled = false;
-        const floorTop = Math.floor(h * 0.24);
-        const floorBottom = Math.floor(h * 0.90);
+        const floorTop = Math.floor(state.height * 0.24);
+        const floorBottom = Math.floor(state.height * 0.90);
         state.player.x = Math.max(54, Math.min(state.player.x, getBarricadeX() - 36));
         state.player.y = Math.max(floorTop + 20, Math.min(state.player.y, floorBottom - 16));
         if (state.rainDrops.length === 0) {
@@ -1488,7 +1469,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         state.devourTimer = 0;
         state.wave = 1;
         state.waveKills = 0;
-        state.waveTargetKills = 30;
+        state.waveTargetKills = 10;
         state.spawnTimer = 0.5;
         state.bossSpawnedForWave = 0;
         state.coins = 45;
@@ -1496,7 +1477,6 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         state.kills = 0;
         state.score = 0;
         state.unlockedWeapons = ['pipe_shotgun'];
-        state.weaponLevels = {};
         state.currentWeaponId = 'pipe_shotgun';
         state.weaponHeat = 0;
         state.fireCooldown = 0;
@@ -1525,6 +1505,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         state.floatingTexts = [];
         state.decals = [];
         state.gibs = [];
+        state.wUp = {}; state.turretLevel = 0; state.turretCd = 0; state.turretFlash = 0; state.turretY = state.height * 0.55;
         state.player.x = Math.max(68, Math.floor(getBarricadeX() * 0.46));
         state.player.y = Math.floor(state.height * 0.58);
         state.player.invulnTimer = 0;
@@ -1540,7 +1521,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       function startWave(nextWave) {
         state.wave = nextWave;
         state.waveKills = 0;
-        state.waveTargetKills = (9 + nextWave * 4) * 3;
+        state.waveTargetKills = 9 + nextWave * 4;
         state.spawnTimer = 0.4;
         if (state.barricadeHp > 0) {
           state.barricadeHp = Math.min(state.barricadeMaxHp, state.barricadeHp + Math.round(state.barricadeMaxHp * 0.15));
@@ -1603,6 +1584,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       }
 
       function spawnParticles(x, y, count, color, speedMin = 40, speedMax = 210, life = 0.35, size = 3) {
+        if (state.particles.length > 420) return;
         for (let i = 0; i < count; i++) {
           const ang = Math.random() * Math.PI * 2;
           const spd = speedMin + Math.random() * (speedMax - speedMin);
@@ -1620,7 +1602,9 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
 
       function fireWeapon() {
         if (!state.running || state.paused || state.gameOver || state.devouring) return;
-        const w = getCurrentWeapon();
+        const w0 = getCurrentWeapon();
+        const up0 = state.wUp[w0.id] || { r: 0, d: 0 };
+        const w = Object.assign({}, w0, { damage: w0.damage * (1 + 0.12 * up0.d), fireRate: w0.fireRate * (1 - 0.08 * up0.r) });
         if (state.fireCooldown > 0) return;
         if (state.weaponHeat >= 99.5) {
           state.fireCooldown = 0.25;
@@ -1831,7 +1815,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
 
       function update(dt) {
         state.time += dt;
-        AudioEngine.updateAmbient(dt);
+        if (!state.paused) AudioEngine.updateAmbient(dt);
         for (const r of state.rainDrops) {
           r.x -= r.spd * 0.25 * dt;
           r.y += r.spd * dt;
@@ -1922,10 +1906,27 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
 
         if (state.autoFire || state.firingManual || state.keys.has('Space')) fireWeapon();
 
+        if (state.turretLevel > 0) {
+          const tx = getBarricadeX() - 30;
+          state.turretCd -= dt;
+          if (state.turretFlash > 0) state.turretFlash -= dt;
+          let tgt = null, bd = 1e9;
+          for (const e of state.enemies) { if (e.x > tx + 30 && e.x < state.width + 10 && e.x < bd) { bd = e.x; tgt = e; } }
+          const fl = Math.floor(state.height * 0.25) + 14, fb = Math.floor(state.height * 0.89) - 14;
+          const wantY = tgt ? tgt.y : (fl + fb) / 2;
+          state.turretY += Math.max(-260 * dt, Math.min(260 * dt, wantY - state.turretY));
+          if (tgt && state.turretCd <= 0) {
+            const ang = Math.atan2(tgt.y - state.turretY, tgt.x - (tx + 22));
+            state.projectiles.push({ kind: 'bullet', x: tx + 22, y: state.turretY, vx: Math.cos(ang) * 900, vy: Math.sin(ang) * 900, damage: 8 + state.turretLevel * 5, splash: 0, pierceLeft: 1, color: '#9ff0d6', rot: 0, hitIds: new Set() });
+            state.turretCd = Math.max(0.07, 0.36 - 0.06 * state.turretLevel);
+            state.turretFlash = 0.05;
+            AudioEngine.playTone(520, 140, 0.05, 'square', 0.04);
+          }
+        }
         state.spawnTimer -= dt;
-        if (state.spawnTimer <= 0 && state.enemies.length < 21 + state.wave * 6) {
+        if (state.spawnTimer <= 0 && state.enemies.length < 7 + state.wave * 2) {
           spawnEnemy();
-          state.spawnTimer = Math.max(0.22, 0.62 - state.wave * 0.037);
+          state.spawnTimer = Math.max(0.55, 1.85 - state.wave * 0.11);
         }
 
         for (let i = state.projectiles.length - 1; i >= 0; i--) {
@@ -2458,6 +2459,15 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
           ctx.fillStyle = g.c; ctx.fillRect(gx - s / 2, gy - s / 2, s, s);
           ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(gx - s / 2, gy - s / 2, s / 2, s / 3);
         }
+        if (state.turretLevel > 0) {
+          const tx = getBarricadeX() - 30, ty = state.turretY;
+          ctx.fillStyle = '#2b2018'; ctx.fillRect(tx - 2, floorTop, 4, floorBottom - floorTop);
+          ctx.fillStyle = '#14100c'; ctx.fillRect(tx - 11, ty - 10, 22, 20);
+          ctx.fillStyle = '#6b5238'; ctx.fillRect(tx - 9, ty - 8, 18, 16);
+          ctx.fillStyle = '#9ff0d6'; ctx.fillRect(tx - 3, ty - 3, 6, 6);
+          ctx.fillStyle = '#8a8f94'; ctx.fillRect(tx + 6, ty - 2, 16, 4);
+          if (state.turretFlash > 0) { ctx.fillStyle = '#ffe14a'; ctx.fillRect(tx + 22, ty - 4, 9, 8); }
+        }
         const renderables = [{ sortY: state.player.y, draw: drawPlayer }];
         for (const e of state.enemies) renderables.push({ sortY: e.y, draw: () => drawEnemy(e) });
         renderables.sort((a, b) => a.sortY - b.sortY);
@@ -2573,9 +2583,9 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         ctx.restore();
         ctx = realCtx;
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(buf, 0, 0, buf.width, buf.height, 0, 0, buf.width * PX, buf.height * PX);
-        if (state.player.invulnTimer > 0) { ctx.fillStyle = 'rgba(150,0,0,' + Math.min(0.4, state.player.invulnTimer * 0.9) + ')'; ctx.fillRect(0, 0, w, h); }
-        if (state.running && state.hp < state.maxHp * 0.3) { ctx.fillStyle = 'rgba(120,0,0,' + (0.12 + 0.08 * Math.sin(state.time * 6)) + ')'; ctx.fillRect(0, 0, w, h); }
+        ctx.drawImage(buf, 0, 0, buf.width, buf.height, 0, 0, CW, CH);
+        if (state.player.invulnTimer > 0) { ctx.fillStyle = 'rgba(150,0,0,' + Math.min(0.4, state.player.invulnTimer * 0.9) + ')'; ctx.fillRect(0, 0, CW, CH); }
+        if (state.running && state.hp < state.maxHp * 0.3) { ctx.fillStyle = 'rgba(120,0,0,' + (0.12 + 0.08 * Math.sin(state.time * 6)) + ')'; ctx.fillRect(0, 0, CW, CH); }
       }
 
       function drawPlayer() {
@@ -2626,7 +2636,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         ctx.ellipse(enemy.x, enemy.y + enemy.radius + 4, enemy.radius * 0.85, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.drawImage(sprite, Math.round(enemy.x - enemy.radius * 1.65), Math.round(enemy.y - enemy.radius * 1.65), Math.round(enemy.radius * 3.3), Math.round(enemy.radius * 3.3));
+        ctx.drawImage(sprite, Math.round(enemy.x - sprite.width * 0.5), Math.round(enemy.y - sprite.height * 0.55));
         if (enemy.hitFlash > 0) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
           ctx.beginPath();
@@ -2646,7 +2656,6 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       function hasAffordableUpgrade() {
         for (const w of WEAPONS) {
           if (!state.unlockedWeapons.includes(w.id) && state.coins >= w.cost) return true;
-          if (state.unlockedWeapons.includes(w.id) && getWeaponLevel(w.id) < MAX_WEAPON_LEVEL && state.coins >= getWeaponUpgradeCost(w)) return true;
         }
         const nextArmor = ARMOR_TIERS[state.armorTier + 1];
         if (nextArmor && state.coins >= nextArmor.cost) return true;
@@ -2703,24 +2712,19 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         document.getElementById('modal-coins').textContent = `${state.coins} Cr`;
 
         if (activeTab === 'weapons') {
-          for (const base of WEAPONS) {
-            const w = getWeaponStats(base);
+          for (const w of WEAPONS) {
             const owned = state.unlockedWeapons.includes(w.id);
             const equipped = state.currentWeaponId === w.id;
-            const level = getWeaponLevel(w.id);
-            const upgradeCost = getWeaponUpgradeCost(base);
             const card = document.createElement('div');
             card.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
             card.innerHTML = `
               <div>
-                <div class="item-name">MK.${w.tier} // ${w.name} ${owned ? `<span style="color:#67e8f9">[LV.${level}/${MAX_WEAPON_LEVEL}]</span>` : ''}</div>
+                <div class="item-name">MK.${w.tier} // ${w.name}</div>
                 <div class="item-desc">${w.desc}</div>
-                <div class="item-stats">Sebzés: ${w.damage} • Tűzgyorsaság: ${(1 / w.fireRate).toFixed(1)}/s • Hőtermelés: ${w.heatPerShot.toFixed(1)} • Áthatolás: ${w.pierce >= 99 ? '∞' : w.pierce}</div>
-                ${owned ? `<div class="item-stats" style="color:#a5f3fc">Fejlesztés: +${level * 18}% sebzés • +${Math.round((1 - Math.pow(0.95, level)) * 100)}% tűzgyorsaság • -${Math.round((1 - Math.pow(0.92, level)) * 100)}% hő</div>` : ''}
+                <div class="item-stats">Sebzés: ${w.damage} • Tűzgyorsaság: ${(1 / w.fireRate).toFixed(1)}/s</div>
               </div>
               <div class="item-actions"></div>
             `;
-            const actions = card.querySelector('.item-actions');
             const btn = document.createElement('button');
             btn.type = 'button';
             if (owned) {
@@ -2734,22 +2738,6 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
                 updateHud();
                 renderModalTab();
               });
-              actions.appendChild(btn);
-
-              const upgradeBtn = document.createElement('button');
-              upgradeBtn.type = 'button';
-              upgradeBtn.className = 'buy-btn';
-              upgradeBtn.textContent = level >= MAX_WEAPON_LEVEL ? 'MAX FEJLESZTÉS' : `FEJLESZTÉS +1 (${upgradeCost} Cr)`;
-              upgradeBtn.disabled = level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost;
-              upgradeBtn.addEventListener('click', () => {
-                if (level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost) return;
-                state.coins -= upgradeCost;
-                state.weaponLevels[w.id] = level + 1;
-                AudioEngine.playBuy();
-                updateHud();
-                renderModalTab();
-              });
-              actions.appendChild(upgradeBtn);
             } else {
               btn.className = 'buy-btn';
               btn.textContent = `MEGVÁSÁRLÁS (${w.cost} Cr)`;
@@ -2764,7 +2752,22 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
                 updateHud();
                 renderModalTab();
               });
-              actions.appendChild(btn);
+            }
+            card.querySelector('.item-actions').appendChild(btn);
+            if (owned) {
+              const up = state.wUp[w.id] || (state.wUp[w.id] = { r: 0, d: 0 });
+              const row = document.createElement('div');
+              row.className = 'item-actions';
+              for (const [k, label] of [['r', '⚡ TŰZGYORSASÁG'], ['d', '💥 SEBZÉS']]) {
+                const cost = Math.round((50 + w.cost * 0.12) * (1 + up[k] * 0.9));
+                const b = document.createElement('button');
+                b.type = 'button'; b.className = 'buy-btn';
+                b.textContent = up[k] >= 5 ? `${label} MAX` : `${label} ${up[k]}/5 (${cost} Cr)`;
+                b.disabled = up[k] >= 5 || state.coins < cost;
+                b.addEventListener('click', () => { if (up[k] >= 5 || state.coins < cost) return; state.coins -= cost; up[k]++; AudioEngine.playBuy(); updateHud(); renderModalTab(); });
+                row.appendChild(b);
+              }
+              card.appendChild(row);
             }
             container.appendChild(card);
           }
@@ -2813,7 +2816,20 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
           const repairCost = 35;
           const coolCost = 95 + state.coolingLevel * 80;
           const magCost = 85 + state.magnetLevel * 75;
+          const tCost = 140 + state.turretLevel * 130;
           const cards = [
+            {
+              title: `🤖 Autonóm Gépfegyver-torony (SZINT ${state.turretLevel}/4)`,
+              desc: 'Sínen futó automata lövegtorony a barikád mögött: magától célozza és lövi a legközelebbi szörnyet. Magasabb szinten gyorsabb és erősebb.',
+              stats: `Tűzgyorsaság: ${state.turretLevel ? (1 / Math.max(0.07, 0.36 - 0.06 * state.turretLevel)).toFixed(1) : 0}/s • Sebzés: ${state.turretLevel ? 8 + state.turretLevel * 5 : 0}`,
+              btnText: state.turretLevel >= 4 ? 'MAX SZINT' : `${state.turretLevel ? 'FEJLESZTÉS' : 'TELEPÍTÉS'} (${tCost} Cr)`,
+              disabled: state.turretLevel >= 4 || state.coins < tCost,
+              onClick: () => {
+                if (state.turretLevel >= 4 || state.coins < tCost) return;
+                state.coins -= tCost; state.turretLevel++;
+                AudioEngine.playBuy(); updateHud(); renderModalTab();
+              }
+            },
             {
               title: `🚧 Barikád Fal (SZINT ${state.barricadeLevel}/4)`,
               desc: 'Fizikai akadály és plazma-védővonal. Magasabb szinten elektromos ívvel sebzi a falat támadó szörnyeket.',
@@ -2977,6 +2993,44 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         });
       });
 
+      const pauseScreen = document.getElementById('pause-screen');
+      function setPause(on) {
+        if (!state.running || state.gameOver || menuModal.classList.contains('active')) return;
+        state.paused = on; pauseScreen.classList.toggle('active', on);
+        if (on) { state.firingManual = false; fireBtn.classList.remove('firing'); }
+      }
+      async function hardRefresh() {
+        try {
+          if ('serviceWorker' in navigator) { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); }
+          if (window.caches) { for (const k of await caches.keys()) await caches.delete(k); }
+        } catch (_) {}
+        location.reload();
+      }
+      function setUi(v) {
+        uiScale = Math.max(0.5, Math.min(1.5, Math.round(v * 10) / 10));
+        try { localStorage.setItem('c1k_ui', String(uiScale)); } catch (_) {}
+        applyUi(); resizeCanvas();
+      }
+      document.getElementById('btn-pause').addEventListener('click', () => setPause(!pauseScreen.classList.contains('active')));
+      document.getElementById('btn-resume').addEventListener('click', () => setPause(false));
+      document.getElementById('btn-pause-armory').addEventListener('click', () => { pauseScreen.classList.remove('active'); openMenu(); });
+      document.getElementById('btn-refresh').addEventListener('click', hardRefresh);
+      document.getElementById('btn-refresh2').addEventListener('click', hardRefresh);
+      document.getElementById('btn-ui-minus').addEventListener('click', () => setUi(uiScale - 0.1));
+      document.getElementById('btn-ui-plus').addEventListener('click', () => setUi(uiScale + 0.1));
+      document.getElementById('btn-restart2').addEventListener('click', () => { pauseScreen.classList.remove('active'); resetGame(); });
+      window.addEventListener('keydown', e => { if (e.code === 'KeyP') setPause(!pauseScreen.classList.contains('active')); });
+      document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+      document.getElementById('btn-start').addEventListener('click', () => {
+        try {
+          if (window.matchMedia('(pointer:coarse)').matches) {
+            const el = document.documentElement;
+            if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+          }
+        } catch (_) {}
+      });
+      applyUi();
       document.getElementById('btn-start').addEventListener('click', resetGame);
       document.getElementById('btn-restart').addEventListener('click', resetGame);
 

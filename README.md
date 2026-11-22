@@ -1,5 +1,7 @@
 # ALONE IN THE CORRIDOR: 1000 DAYS
 
+> ⚠️ **MI-asszisztensek / AI assistants:** olvasd el az [`AGENTS.md`](./AGENTS.md) fájlt módosítás előtt – a jelenlegi verzió csak javítható, a fő irányzattól nem térhet el.
+
 16-bites retro sci-fi **Tech-Noir Survival Horror** akció-túlélőjáték HTML5 Canvas és Vanilla JavaScript alapokon — mobil-első (landscape) kialakítással, offline PWA támogatással és PWABuilder APK-kompatibilitással.
 
 ## Mit tartalmaz a repó?
