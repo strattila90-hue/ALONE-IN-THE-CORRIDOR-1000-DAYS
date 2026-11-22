@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alone-in-the-corridor-1000-days-v1';
+const CACHE_NAME = 'alone-in-the-corridor-1000-days-v2';
 const ASSETS = [
   './',
   './index.html',
