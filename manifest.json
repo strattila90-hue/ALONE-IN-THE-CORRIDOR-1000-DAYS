@@ -1,0 +1,23 @@
+{
+  "name": "ALONE IN THE CORRIDOR: 1000 DAYS",
+  "short_name": "Corridor 1000D",
+  "description": "16-bit Tech-Noir Sci-Fi Survival Horror Defense Shooter PWA",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05070b",
+  "theme_color": "#070a0f",
+  "categories": [
+    "games",
+    "action"
+  ],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

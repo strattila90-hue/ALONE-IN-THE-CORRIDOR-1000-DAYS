@@ -1,0 +1,2537 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#070a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>ALONE IN THE CORRIDOR: 1000 DAYS — Tech-Noir Survival</title>
+  <style>
+    :root {
+      --bg-void: #05070b;
+      --bg-panel: rgba(10, 15, 23, 0.9);
+      --bg-card: rgba(16, 24, 36, 0.88);
+      --border-steel: #27384d;
+      --border-glow: #38bdf8;
+      --cyan: #38bdf8;
+      --cyan-dim: rgba(56, 189, 248, 0.16);
+      --crimson: #ef4444;
+      --crimson-glow: rgba(239, 68, 68, 0.25);
+      --amber: #f59e0b;
+      --emerald: #10b981;
+      --violet: #a855f7;
+      --text-main: #e2e8f0;
+      --text-dim: #94a3b8;
+      --clip-cut: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      --clip-sm: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-void);
+      color: var(--text-main);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      touch-action: none;
+    }
+
+    #game-root {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 25%, #111827 0%, #06080d 65%, #030407 100%);
+    }
+
+    canvas#gameCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .noir-scanlines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.22) 3px,
+        rgba(0, 0, 0, 0.22) 4px
+      );
+      opacity: 0.55;
+    }
+
+    .noir-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      box-shadow: inset 0 0 110px rgba(0, 0, 0, 0.88), inset 0 0 28px rgba(56, 189, 248, 0.08);
+    }
+
+    #hud-top {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 12;
+      pointer-events: none;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .hud-panel {
+      pointer-events: auto;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-steel);
+      clip-path: var(--clip-sm);
+      padding: 5px 9px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(148, 163, 184, 0.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 78px;
+    }
+
+    .hud-label {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .hud-value {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text-main);
+    }
+
+    .bar-track {
+      width: 112px;
+      height: 8px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      margin-top: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.12s linear;
+    }
+
+    #hp-fill { background: linear-gradient(90deg, #991b1b, #ef4444); }
+    #shield-fill { background: linear-gradient(90deg, #0369a1, #38bdf8); }
+    #barricade-fill { background: linear-gradient(90deg, #b45309, #f59e0b); }
+    #heat-fill { background: linear-gradient(90deg, #059669, #eab308, #ef4444); width: 0%; }
+
+    .tactile-btn {
+      position: relative;
+      pointer-events: auto;
+      background: linear-gradient(180deg, rgba(24, 35, 52, 0.96), rgba(10, 15, 24, 0.98));
+      color: var(--text-main);
+      border: 1px solid #395170;
+      clip-path: var(--clip-sm);
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      transition: transform 0.07s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .tactile-btn:active {
+      transform: scale(0.95);
+    }
+
+    .tactile-btn.active {
+      border-color: var(--cyan);
+      color: #e0f2fe;
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.65), rgba(8, 47, 73, 0.9));
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .badge-alert {
+      position: absolute;
+      top: -5px;
+      right: -4px;
+      background: var(--crimson);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 999px;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+      display: none;
+    }
+
+    .badge-alert.show {
+      display: inline-block;
+    }
+
+    #boss-hud {
+      position: absolute;
+      top: calc(max(8px, env(safe-area-inset-top)) + 48px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(440px, 68vw);
+      background: rgba(20, 7, 12, 0.92);
+      border: 1px solid rgba(239, 68, 68, 0.75);
+      clip-path: var(--clip-sm);
+      padding: 6px 12px;
+      z-index: 12;
+      display: none;
+      box-shadow: 0 0 22px rgba(239, 68, 68, 0.35);
+    }
+
+    #boss-hud.active {
+      display: block;
+    }
+
+    .boss-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fca5a5;
+      margin-bottom: 4px;
+    }
+
+    #boss-fill {
+      height: 9px;
+      width: 100%;
+      background: linear-gradient(90deg, #7f1d1d, #dc2626, #f97316);
+    }
+
+    #wave-banner {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(7, 11, 18, 0.92);
+      border-top: 2px solid var(--cyan);
+      border-bottom: 2px solid var(--crimson);
+      padding: 10px 28px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      color: #f8fafc;
+      text-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
+      z-index: 15;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    #wave-banner.show {
+      opacity: 1;
+    }
+
+    #diag-box {
+      position: absolute;
+      top: calc(max(8px, env(safe-area-inset-top)) + 48px);
+      right: max(10px, env(safe-area-inset-right));
+      background: rgba(5, 8, 13, 0.88);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 10px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #bae6fd;
+      z-index: 14;
+      display: none;
+      pointer-events: none;
+    }
+
+    #diag-box.show {
+      display: block;
+    }
+
+    #touch-controls {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #joy-zone {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 48%;
+      height: 62%;
+      pointer-events: auto;
+    }
+
+    #joy-base {
+      position: absolute;
+      left: max(22px, env(safe-area-inset-left));
+      bottom: max(22px, env(safe-area-inset-bottom));
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, rgba(15, 23, 42, 0.55) 75%, rgba(56, 189, 248, 0.22) 100%);
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
+      pointer-events: none;
+    }
+
+    #joy-knob {
+      position: absolute;
+      left: 33px;
+      top: 33px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #7dd3fc, #0284c7 70%, #0c4a6e);
+      border: 2px solid #e0f2fe;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.7);
+      pointer-events: none;
+    }
+
+    #right-action-pad {
+      position: absolute;
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .action-sub-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #btn-fire {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(248, 113, 113, 0.9), rgba(185, 28, 28, 0.95) 68%, rgba(69, 10, 10, 0.98));
+      border: 2.5px solid #fca5a5;
+      color: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      box-shadow: 0 0 22px rgba(239, 68, 68, 0.45), inset 0 2px 6px rgba(255, 255, 255, 0.3);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    }
+
+    #btn-fire.firing, #btn-fire:active {
+      transform: scale(0.93);
+      box-shadow: 0 0 32px rgba(248, 113, 113, 0.85);
+    }
+
+    .pad-btn {
+      background: linear-gradient(180deg, rgba(22, 33, 49, 0.94), rgba(9, 14, 22, 0.96));
+      border: 1.5px solid #3b5575;
+      color: var(--text-main);
+      clip-path: var(--clip-sm);
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+    }
+
+    .pad-btn:active {
+      transform: scale(0.95);
+    }
+
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(4, 6, 11, 0.86);
+      backdrop-filter: blur(4px);
+      z-index: 25;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    }
+
+    .overlay-screen.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(860px, 96vw);
+      max-height: 92vh;
+      background: linear-gradient(165deg, rgba(15, 23, 36, 0.98), rgba(7, 11, 18, 0.99));
+      border: 1px solid #334b6b;
+      clip-path: var(--clip-cut);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+      background: rgba(9, 14, 24, 0.95);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(8, 12, 20, 0.85);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: rgba(20, 30, 46, 0.8);
+      border: 1px solid #2d425e;
+      color: var(--text-dim);
+      clip-path: var(--clip-sm);
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: rgba(14, 116, 144, 0.35);
+      border-color: var(--cyan);
+      color: #f0f9ff;
+    }
+
+    .modal-body {
+      padding: 12px 14px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+      gap: 10px;
+    }
+
+    .shop-item {
+      background: var(--bg-card);
+      border: 1px solid #283a52;
+      clip-path: var(--clip-sm);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .shop-item.owned {
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+
+    .shop-item.equipped {
+      border-color: var(--cyan);
+      box-shadow: inset 0 0 14px rgba(56, 189, 248, 0.14);
+    }
+
+    .item-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+
+    .item-desc {
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.38;
+      margin-top: 3px;
+    }
+
+    .item-stats {
+      font-size: 10px;
+      color: #7dd3fc;
+      margin-top: 4px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .buy-btn {
+      flex: 1;
+      background: linear-gradient(180deg, #0284c7, #0369a1);
+      border: 1px solid #7dd3fc;
+      color: #fff;
+      clip-path: var(--clip-sm);
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .buy-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .buy-btn.equip {
+      background: linear-gradient(180deg, #059669, #047857);
+      border-color: #6ee7b7;
+    }
+
+    .buy-btn.selected {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: #64748b;
+      color: #cbd5e1;
+    }
+
+    .hero-card {
+      width: min(620px, 94vw);
+      background: linear-gradient(165deg, rgba(13, 19, 30, 0.97), rgba(5, 8, 13, 0.99));
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      clip-path: var(--clip-cut);
+      padding: 20px 22px;
+      text-align: center;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.95), 0 0 40px rgba(239, 68, 68, 0.16);
+    }
+
+    .hero-title {
+      font-size: clamp(20px, 4vw, 30px);
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #f8fafc;
+      text-shadow: 0 0 18px rgba(56, 189, 248, 0.55);
+      margin: 0 0 6px;
+    }
+
+    .hero-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      margin: 0 0 14px;
+      line-height: 1.45;
+    }
+
+    .start-btn {
+      background: linear-gradient(180deg, #dc2626, #991b1b);
+      border: 1.5px solid #fca5a5;
+      color: #fff;
+      clip-path: var(--clip-sm);
+      padding: 11px 26px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.5);
+    }
+
+    .start-btn:active {
+      transform: scale(0.96);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 12px 0 16px;
+      text-align: left;
+    }
+
+    .stat-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #27384d;
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+
+    @media (max-height: 500px) and (orientation: landscape) {
+      .hud-panel { padding: 4px 7px; min-width: 66px; }
+      .bar-track { width: 84px; height: 6px; }
+      #joy-base { width: 96px; height: 96px; left: 16px; bottom: 14px; }
+      #joy-knob { width: 38px; height: 38px; left: 29px; top: 29px; }
+      #btn-fire { width: 72px; height: 72px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root">
+    <canvas id="gameCanvas"></canvas>
+    <div class="noir-scanlines"></div>
+    <div class="noir-vignette"></div>
+
+    <div id="hud-top">
+      <div class="hud-group">
+        <div class="hud-panel">
+          <div class="hud-label">ÉLETERŐ (HP)</div>
+          <div class="hud-value" id="hud-hp-txt">100 / 100</div>
+          <div class="bar-track"><div class="bar-fill" id="hp-fill"></div></div>
+        </div>
+
+        <div class="hud-panel">
+          <div class="hud-label">PAJZS (SHD)</div>
+          <div class="hud-value" id="hud-shd-txt">0 / 0</div>
+          <div class="bar-track"><div class="bar-fill" id="shield-fill"></div></div>
+        </div>
+
+        <div class="hud-panel">
+          <div class="hud-label">🚧 BARIKÁD</div>
+          <div class="hud-value" id="hud-bar-txt">400 / 400</div>
+          <div class="bar-track"><div class="bar-fill" id="barricade-fill"></div></div>
+        </div>
+
+        <div class="hud-panel">
+          <div class="hud-label">HŐ / FEGYVER</div>
+          <div class="hud-value" id="hud-weap-txt" style="color:#7dd3fc;">CSŐPUSKA</div>
+          <div class="bar-track"><div class="bar-fill" id="heat-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="hud-group">
+        <div class="hud-panel">
+          <div class="hud-label">HULLÁM</div>
+          <div class="hud-value" id="hud-wave-txt" style="color:#fbbf24;">W1</div>
+        </div>
+
+        <div class="hud-panel">
+          <div class="hud-label">KREDIT</div>
+          <div class="hud-value" id="hud-coins-txt" style="color:#34d399;">0 Cr</div>
+        </div>
+
+        <button class="tactile-btn" id="btn-open-shop" type="button">
+          ☰ MENÜ / BOLT
+          <span class="badge-alert" id="shop-badge">!</span>
+        </button>
+
+        <button class="tactile-btn active" id="btn-audio" type="button" title="Hang / Zene">🔊</button>
+        <button class="tactile-btn" id="btn-diag" type="button" title="Diagnosztika">📊</button>
+      </div>
+    </div>
+
+    <div id="boss-hud">
+      <div class="boss-header">
+        <span id="boss-name">☠ LEVIATHAN HORROR</span>
+        <span id="boss-hp-txt">100%</span>
+      </div>
+      <div class="bar-track" style="width:100%; height:9px; margin-top:0;">
+        <div class="bar-fill" id="boss-fill"></div>
+      </div>
+    </div>
+
+    <div id="wave-banner">HULLÁM 1</div>
+    <div id="diag-box"></div>
+
+    <div id="touch-controls">
+      <div id="joy-zone">
+        <div id="joy-base">
+          <div id="joy-knob"></div>
+        </div>
+      </div>
+
+      <div id="right-action-pad">
+        <div class="action-sub-col">
+          <button class="pad-btn" id="btn-autofire" type="button">🎯 AUTO: KI</button>
+          <button class="pad-btn" id="btn-switch-weap" type="button">🔄 FEGYVER</button>
+        </div>
+        <button id="btn-fire" type="button">TŰZ</button>
+      </div>
+    </div>
+
+    <div class="overlay-screen" id="menu-modal">
+      <div class="modal-card">
+        <div class="modal-top">
+          <button class="tactile-btn" id="btn-back-game" type="button">⬅ VISSZA</button>
+          <div class="modal-title">TAKTIKAI TERMINÁL // CORRIDOR-1000D</div>
+          <div style="font-size:12px; font-weight:800; color:#34d399;" id="modal-coins">0 Cr</div>
+        </div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="weapons" type="button">🔫 FEGYVEREK</button>
+          <button class="tab-btn" data-tab="armor" type="button">🛡️ PÁNCÉLZAT &amp; EXOSUIT</button>
+          <button class="tab-btn" data-tab="barricade" type="button">🚧 BARIKÁD &amp; RENDSZEREK</button>
+        </div>
+
+        <div class="modal-body" id="modal-items"></div>
+      </div>
+    </div>
+
+    <div class="overlay-screen active" id="start-screen">
+      <div class="hero-card">
+        <div style="font-size:10px; letter-spacing:0.18em; color:#ef4444; font-weight:800; margin-bottom:4px;">
+          SECTOR-09 // TECH-NOIR SURVIVAL HORROR
+        </div>
+        <h1 class="hero-title">ALONE IN THE CORRIDOR: 1000 DAYS</h1>
+        <p class="hero-sub">
+          VÉDD A BARIKÁDOT A SÖTÉTSÉGBŐL ELŐTÖRŐ MUTÁNS RAJOKKAL SZEMBEN.<br/>
+          BALRÓL JOBBRA LŐSZ • FEJLESZTHETŐ FEGYVEREK, EXOSUIT PÁNCÉLZAT ÉS BARIKÁD
+        </p>
+        <button class="start-btn" id="btn-start" type="button">▶ BEVETÉS INDÍTÁSA</button>
+      </div>
+    </div>
+
+    <div class="overlay-screen" id="gameover-screen">
+      <div class="hero-card" style="border-color: rgba(239, 68, 68, 0.75);">
+        <div style="font-size:11px; letter-spacing:0.16em; color:#ef4444; font-weight:900;">
+          K.I.A. // ELFOGYASZTVA A SÖTÉTSÉGBEN
+        </div>
+        <h2 class="hero-title" style="color:#fca5a5; margin-top:4px;">A HŐS ELESETT</h2>
+        <div class="stats-grid" id="gameover-stats"></div>
+        <button class="start-btn" id="btn-restart" type="button">↻ ÚJ BEVETÉS</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      const WEAPONS = [
+        {
+          id: 'pipe_shotgun',
+          name: 'Rozsdás Csőpuska',
+          tier: 1,
+          cost: 0,
+          damage: 24,
+          fireRate: 0.62,
+          heatPerShot: 14,
+          pellets: 5,
+          spread: 0.24,
+          speed: 690,
+          splash: 0,
+          pierce: 1,
+          shake: 3.2,
+          color: '#fbbf24',
+          desc: 'Kezdetleges, 5 sörétes lövést szóró vascső füstös torkolattűzzel.'
+        },
+        {
+          id: 'smg_9mm',
+          name: '9mm Katona Géppisztoly',
+          tier: 2,
+          cost: 90,
+          damage: 16,
+          fireRate: 0.13,
+          heatPerShot: 4.5,
+          pellets: 1,
+          spread: 0.05,
+          speed: 880,
+          splash: 0,
+          pierce: 1,
+          shake: 0.0,
+          color: '#fde047',
+          desc: 'Gyors sorozatlövés arany nyomjelzőkkel és kipattanó hüvelyekkel. Remegésmentes!'
+        },
+        {
+          id: 'pulse_rifle',
+          name: 'Impulzus Gépkarabély',
+          tier: 3,
+          cost: 220,
+          damage: 34,
+          fireRate: 0.15,
+          heatPerShot: 5.5,
+          pellets: 1,
+          spread: 0.025,
+          speed: 1060,
+          splash: 0,
+          pierce: 2,
+          shake: 0.0,
+          color: '#38bdf8',
+          desc: 'Nagy sebességű kék ion-impulzusok, amelyek átszúrnak több célpontot is.'
+        },
+        {
+          id: 'plasma_cannon',
+          name: 'Plazma Ágyú',
+          tier: 4,
+          cost: 420,
+          damage: 115,
+          fireRate: 0.56,
+          heatPerShot: 22,
+          pellets: 1,
+          spread: 0.0,
+          speed: 580,
+          splash: 96,
+          pierce: 1,
+          shake: 4.5,
+          color: '#22c55e',
+          desc: 'Keringő gyűrűs zöld-narancs plazmagömb, pusztító robbanási sugárral.'
+        },
+        {
+          id: 'hyper_railgun',
+          name: 'Hiper-Lézer Railgun',
+          tier: 5,
+          cost: 720,
+          damage: 240,
+          fireRate: 0.88,
+          heatPerShot: 30,
+          pellets: 1,
+          spread: 0.0,
+          speed: 2400,
+          splash: 38,
+          pierce: 99,
+          shake: 5.5,
+          color: '#e879f9',
+          desc: 'A képernyő teljes szélességén áthatoló elektromágneses csúcsfegyver.'
+        }
+      ];
+
+      const ARMOR_TIERS = [
+        {
+          tier: 0,
+          name: 'Kopott Felderítő Overál',
+          cost: 0,
+          maxHp: 100,
+          maxShield: 0,
+          speedMult: 1.0,
+          desc: 'Alap védőruha sötét-kék noir árnyalattal.'
+        },
+        {
+          tier: 1,
+          name: 'Kevlár Mellvért + Térdvédő',
+          cost: 130,
+          maxHp: 145,
+          maxShield: 35,
+          speedMult: 1.03,
+          desc: 'Megerősített ballisztikus mellvért és alap energiapajzs.'
+        },
+        {
+          tier: 2,
+          name: 'Titan Exoskeleton Rig',
+          cost: 310,
+          maxHp: 200,
+          maxShield: 85,
+          speedMult: 1.08,
+          desc: 'Hidraulikus vázszerkezet, erősebb pajzs és gyorsabb mozgás.'
+        },
+        {
+          tier: 3,
+          name: 'Dreadnought Plazma-Exosuit',
+          cost: 580,
+          maxHp: 270,
+          maxShield: 150,
+          speedMult: 1.12,
+          desc: 'Nehéz noir-acél páncélzat, erős reflektor-fénnyel és nagy pajzskapacitással.'
+        }
+      ];
+
+      const ENEMY_TYPES = {
+        swarmer: { name: 'Gyors Rajzó', hp: 34, speed: 132, dmg: 10, barDmg: 12, radius: 13, reward: 12, xp: 10, spitType: null, color: '#ef4444', accent: '#fca5a5' },
+        spitter: { name: 'Savköpő', hp: 58, speed: 74, dmg: 14, barDmg: 14, radius: 16, reward: 20, xp: 16, spitType: 'acid', color: '#84cc16', accent: '#bef264' },
+        brute: { name: 'Páncélozott Gólem', hp: 195, speed: 44, dmg: 26, barDmg: 34, radius: 24, reward: 42, xp: 32, spitType: null, color: '#7c3aed', accent: '#c4b5fd' },
+        stalker: { name: 'Csontkaszás Vadász', hp: 76, speed: 158, dmg: 18, barDmg: 22, radius: 16, reward: 26, xp: 22, spitType: null, color: '#e11d48', accent: '#fda4af' },
+        carrier: { name: 'Lárvahordozó', hp: 125, speed: 56, dmg: 15, barDmg: 18, radius: 21, reward: 35, xp: 28, spitType: 'egg', color: '#b91c1c', accent: '#f87171' },
+        larva: { name: 'Bio-Lárva', hp: 18, speed: 185, dmg: 8, barDmg: 6, radius: 9, reward: 6, xp: 6, spitType: null, color: '#f97316', accent: '#fed7aa' },
+        wraith: { name: 'Fázis-Lidérc', hp: 92, speed: 96, dmg: 16, barDmg: 10, radius: 17, reward: 32, xp: 25, spitType: 'phase', color: '#a855f7', accent: '#e9d5ff' },
+        bomber: { name: 'Savbomba Mutáns', hp: 64, speed: 112, dmg: 28, barDmg: 48, radius: 17, reward: 24, xp: 20, spitType: null, color: '#eab308', accent: '#fef08a' },
+        screamer: { name: 'Pszicho-Sikoltó', hp: 110, speed: 62, dmg: 15, barDmg: 16, radius: 19, reward: 38, xp: 30, spitType: 'sonic', color: '#ec4899', accent: '#fbcfe8' },
+        boss: { name: 'LEVIATHAN HORROR', hp: 1650, speed: 34, dmg: 32, barDmg: 45, radius: 44, reward: 260, xp: 180, spitType: 'boss', color: '#dc2626', accent: '#38bdf8', isBoss: true }
+      };
+
+      const AudioEngine = {
+        ctx: null,
+        muted: false,
+        droneTimer: 0,
+        beatStep: 0,
+
+        init() {
+          if (this.ctx) {
+            if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+            return;
+          }
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          try { this.ctx = new AudioCtx(); } catch (_) { this.ctx = null; }
+        },
+
+        toggleMute() {
+          this.muted = !this.muted;
+          const btn = document.getElementById('btn-audio');
+          if (btn) {
+            btn.textContent = this.muted ? '🔇' : '🔊';
+            btn.classList.toggle('active', !this.muted);
+          }
+          if (!this.muted) this.init();
+        },
+
+        playTone(freq, endFreq, dur, type, vol, delay = 0) {
+          if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+          try {
+            const now = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type || 'square';
+            osc.frequency.setValueAtTime(freq, now);
+            if (endFreq && endFreq !== freq) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + dur);
+            }
+            gain.gain.setValueAtTime(Math.max(0.0001, vol), now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + dur + 0.01);
+          } catch (_) {}
+        },
+
+        playNoise(dur, filterFreq, vol, type = 'bandpass') {
+          if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+          try {
+            const sampleRate = this.ctx.sampleRate;
+            const len = Math.max(1, Math.floor(sampleRate * dur));
+            const buffer = this.ctx.createBuffer(1, len, sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+            const src = this.ctx.createBufferSource();
+            src.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = type;
+            filter.frequency.setValueAtTime(filterFreq, this.ctx.currentTime);
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            src.start();
+          } catch (_) {}
+        },
+
+        playWeapon(weaponId) {
+          if (weaponId === 'pipe_shotgun') {
+            this.playTone(170, 38, 0.17, 'sawtooth', 0.16);
+            this.playNoise(0.14, 950, 0.15, 'lowpass');
+          } else if (weaponId === 'smg_9mm') {
+            this.playTone(520, 120, 0.065, 'square', 0.085);
+            this.playNoise(0.04, 2400, 0.06, 'highpass');
+          } else if (weaponId === 'pulse_rifle') {
+            this.playTone(920, 260, 0.09, 'sawtooth', 0.095);
+            this.playTone(1480, 620, 0.05, 'triangle', 0.05);
+          } else if (weaponId === 'plasma_cannon') {
+            this.playTone(210, 42, 0.28, 'sawtooth', 0.17);
+            this.playTone(440, 95, 0.22, 'sine', 0.14);
+            this.playNoise(0.2, 620, 0.11, 'bandpass');
+          } else if (weaponId === 'hyper_railgun') {
+            this.playTone(1800, 75, 0.34, 'sawtooth', 0.18);
+            this.playTone(620, 140, 0.28, 'square', 0.12);
+            this.playNoise(0.24, 3200, 0.14, 'bandpass');
+          }
+        },
+
+        playHit(isCrit) { this.playTone(isCrit ? 780 : 340, 110, 0.05, 'triangle', isCrit ? 0.09 : 0.06); },
+        playSpit(type) {
+          if (type === 'acid') this.playTone(320, 130, 0.12, 'sawtooth', 0.07);
+          else if (type === 'sonic') this.playTone(880, 420, 0.16, 'sine', 0.08);
+          else if (type === 'phase') this.playTone(1150, 540, 0.11, 'triangle', 0.07);
+          else this.playTone(240, 85, 0.14, 'square', 0.08);
+        },
+        playMonsterGrowl() {
+          this.playTone(115, 52, 0.18, 'sawtooth', 0.07);
+          this.playNoise(0.11, 520, 0.06, 'bandpass');
+        },
+        playExplosion() {
+          this.playTone(110, 28, 0.35, 'sawtooth', 0.16);
+          this.playNoise(0.28, 480, 0.14, 'lowpass');
+        },
+        playPickup(kind) {
+          if (kind === 'medkit') {
+            this.playTone(523, 784, 0.12, 'sine', 0.1);
+            this.playTone(784, 1046, 0.14, 'sine', 0.1, 0.08);
+          } else if (kind === 'cell') {
+            this.playTone(660, 1320, 0.14, 'triangle', 0.1);
+          } else {
+            this.playTone(980, 1320, 0.07, 'square', 0.07);
+          }
+        },
+        playBuy() {
+          this.playTone(440, 660, 0.08, 'triangle', 0.1);
+          this.playTone(660, 880, 0.11, 'triangle', 0.1, 0.07);
+        },
+        playDevour() {
+          this.playTone(95, 36, 0.32, 'sawtooth', 0.15);
+          this.playNoise(0.18, 700, 0.12, 'bandpass');
+        },
+        updateAmbient(dt) {
+          if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+          this.droneTimer += dt;
+          if (this.droneTimer >= 0.34) {
+            this.droneTimer -= 0.34;
+            const bassNotes = [55, 55, 65.41, 49, 55, 73.42, 61.74, 46.25];
+            const freq = bassNotes[this.beatStep % bassNotes.length];
+            this.beatStep++;
+            this.playTone(freq, freq * 0.72, 0.22, 'sawtooth', 0.045);
+            if (this.beatStep % 2 === 0) this.playTone(36, 30, 0.16, 'sine', 0.07);
+          }
+        }
+      };
+
+      const spriteCache = new Map();
+
+      function buildPixelSprite(matrix, palette, scale = 4) {
+        const h = matrix.length;
+        const w = matrix[0].length;
+        const c = document.createElement('canvas');
+        c.width = w * scale;
+        c.height = h * scale;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        for (let y = 0; y < h; y++) {
+          const row = matrix[y];
+          for (let x = 0; x < w; x++) {
+            const ch = row[x];
+            if (ch !== '.' && palette[ch]) {
+              ctx.fillStyle = palette[ch];
+              ctx.fillRect(x * scale, y * scale, scale, scale);
+            }
+          }
+        }
+        return c;
+      }
+
+      function getHeroSprite(armorTier, walkFrame) {
+        const key = `hero_${armorTier}_${walkFrame}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const palettes = [
+          { b: '#1e293b', s: '#38bdf8', h: '#64748b', v: '#22d3ee', g: '#94a3b8' },
+          { b: '#1e3a5f', s: '#7dd3fc', h: '#475569', v: '#38bdf8', g: '#cbd5e1' },
+          { b: '#172554', s: '#38bdf8', h: '#334155', v: '#a5f3fc', g: '#e2e8f0' },
+          { b: '#0f172a', s: '#f59e0b', h: '#1e293b', v: '#38bdf8', g: '#f8fafc' }
+        ];
+        const pal = palettes[Math.min(armorTier, palettes.length - 1)];
+        const legL = walkFrame === 1 ? 'h' : 'b';
+        const legR = walkFrame === 2 ? 'h' : 'b';
+        const matrix = [
+          '.....gggggg.....',
+          '....gvvvvvvg....',
+          '....gvvvvvvg....',
+          '....gggggggg....',
+          '...sshhhhhhss...',
+          '..sshhhhhhhhss..',
+          '..shhhbbbbhhhs..',
+          '..shhhbbbbhhhs..',
+          '...shhhhhhhhs...',
+          '....gggggggg....',
+          walkFrame === 1 ? '....' + legL + 'g....' + legR + 'g....' : '.....' + legL + 'g..' + legR + 'g.....',
+          walkFrame === 2 ? '....' + legL + 'g....' + legR + 'g....' : '.....' + legL + 'g..' + legR + 'g.....',
+          '....gg....gg....'
+        ];
+        if (walkFrame === 1) matrix.pop();
+        const sprite = buildPixelSprite(matrix, pal, 4);
+        spriteCache.set(key, sprite);
+        return sprite;
+      }
+
+      function getEnemySprite(typeKey, frame) {
+        const key = `enemy_${typeKey}_${frame}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const cfg = ENEMY_TYPES[typeKey] || ENEMY_TYPES.swarmer;
+        const pal = { m: cfg.color, a: cfg.accent, d: '#18181b', e: '#fef08a', r: '#991b1b' };
+        const alt = frame % 2 === 1;
+        const matrix = typeKey === 'boss'
+          ? [
+              '......dddddddddddd......',
+              '....ddmmmmmmmmmmmmdd....',
+              '...dmmmmaaaaaaaaammmmd...',
+              '..dmmmmmeeddddeemmmmmd..',
+              '.dmmmmmmmmmmmmmmmmmmmmd.',
+              '.dmmrrmmmmmmmmmmmmrrmmd.',
+              '.dmmrrmmmmmmmmmmmmrrmmd.',
+              '..dmmmmmmdddddddmmmmmd..',
+              '...dmmmmddddddddmmmmmd..',
+              '....ddmmddddddddmmdd....',
+              '.....ddmm......mmdd.....',
+              alt ? '....ddmmd......dmmed....' : '.....ddmd......dmdd.....'
+            ]
+          : [
+              '....dddddd....',
+              '..ddmmmmmmdd..',
+              '.dmmmaaaammmd.',
+              '.dmmmeeedmmmd.',
+              'dmmmmmmmmmmmmd',
+              'dmmrrmmmmrmmmd',
+              '.dmmmmddddmmmd',
+              '..ddmm....mmdd',
+              alt ? '.ddmd......dmmd' : '..dmd......dmd.'
+            ];
+        const scale = typeKey === 'boss' ? 5 : (typeKey === 'brute' || typeKey === 'carrier' ? 4 : 3);
+        const sprite = buildPixelSprite(matrix, pal, scale);
+        spriteCache.set(key, sprite);
+        return sprite;
+      }
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const state = {
+        running: false,
+        paused: false,
+        gameOver: false,
+        devouring: false,
+        devourTimer: 0,
+        devourStepTimer: 0,
+        width: 1280,
+        height: 720,
+        dpr: 1,
+        time: 0,
+        dt: 0.016,
+        fps: 60,
+        showDiag: false,
+        wave: 1,
+        waveKills: 0,
+        waveTargetKills: 10,
+        waveBannerTimer: 0,
+        spawnTimer: 0,
+        bossSpawnedForWave: 0,
+        coins: 45,
+        totalEarned: 45,
+        kills: 0,
+        score: 0,
+        unlockedWeapons: ['pipe_shotgun'],
+        currentWeaponId: 'pipe_shotgun',
+        weaponHeat: 0,
+        fireCooldown: 0,
+        muzzleFlash: 0,
+        armorTier: 0,
+        hp: 100,
+        maxHp: 100,
+        shield: 0,
+        maxShield: 0,
+        shieldRegenDelay: 0,
+        barricadeLevel: 1,
+        barricadeHp: 400,
+        barricadeMaxHp: 400,
+        barricadeZapTimer: 0,
+        coolingLevel: 0,
+        magnetLevel: 0,
+        shakeTime: 0,
+        shakeIntensity: 0,
+        gunRecoilX: 0,
+        autoFire: false,
+        firingManual: false,
+        keys: new Set(),
+        player: { x: 110, y: 360, walkTimer: 0, walkFrame: 0, invulnTimer: 0 },
+        projectiles: [],
+        enemyProjectiles: [],
+        enemies: [],
+        pickups: [],
+        acidPools: [],
+        particles: [],
+        floatingTexts: [],
+        decals: [],
+        rainDrops: []
+      };
+
+      function getCurrentWeapon() { return WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0]; }
+      function getArmorConfig() { return ARMOR_TIERS[Math.min(state.armorTier, ARMOR_TIERS.length - 1)]; }
+      function getBarricadeX() { return Math.max(195, Math.min(state.width * 0.27, 330)); }
+
+      function triggerShake(amount, duration = 0.14) {
+        if (amount <= 0) return;
+        state.shakeIntensity = Math.max(state.shakeIntensity, amount);
+        state.shakeTime = Math.max(state.shakeTime, duration);
+      }
+
+      function addFloatingText(x, y, text, color = '#f8fafc') {
+        state.floatingTexts.push({ x, y, text, color, life: 0.75, maxLife: 0.75 });
+      }
+
+      function addDecal(x, y, color = 'rgba(127, 29, 29, 0.42)', radius = 14) {
+        if (state.decals.length > 90) state.decals.shift();
+        state.decals.push({ x, y, color, radius });
+      }
+
+      function resizeCanvas() {
+        const rect = document.getElementById('game-root').getBoundingClientRect();
+        const w = Math.max(320, Math.floor(rect.width || window.innerWidth || 960));
+        const h = Math.max(240, Math.floor(rect.height || window.innerHeight || 540));
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        state.width = w;
+        state.height = h;
+        state.dpr = dpr;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        const floorTop = Math.floor(h * 0.24);
+        const floorBottom = Math.floor(h * 0.90);
+        state.player.x = Math.max(54, Math.min(state.player.x, getBarricadeX() - 36));
+        state.player.y = Math.max(floorTop + 20, Math.min(state.player.y, floorBottom - 16));
+        if (state.rainDrops.length === 0) {
+          for (let i = 0; i < 65; i++) {
+            state.rainDrops.push({ x: Math.random() * w, y: Math.random() * h, len: 10 + Math.random() * 14, spd: 460 + Math.random() * 240 });
+          }
+        }
+      }
+
+      function showWaveBanner(text) {
+        const banner = document.getElementById('wave-banner');
+        if (!banner) return;
+        banner.textContent = text;
+        banner.classList.add('show');
+        state.waveBannerTimer = 2.0;
+      }
+
+      function resetGame() {
+        resizeCanvas();
+        const armor = ARMOR_TIERS[0];
+        state.running = true;
+        state.paused = false;
+        state.gameOver = false;
+        state.devouring = false;
+        state.devourTimer = 0;
+        state.wave = 1;
+        state.waveKills = 0;
+        state.waveTargetKills = 10;
+        state.spawnTimer = 0.5;
+        state.bossSpawnedForWave = 0;
+        state.coins = 45;
+        state.totalEarned = 45;
+        state.kills = 0;
+        state.score = 0;
+        state.unlockedWeapons = ['pipe_shotgun'];
+        state.currentWeaponId = 'pipe_shotgun';
+        state.weaponHeat = 0;
+        state.fireCooldown = 0;
+        state.muzzleFlash = 0;
+        state.armorTier = 0;
+        state.maxHp = armor.maxHp;
+        state.hp = armor.maxHp;
+        state.maxShield = armor.maxShield;
+        state.shield = armor.maxShield;
+        state.shieldRegenDelay = 0;
+        state.barricadeLevel = 1;
+        state.barricadeMaxHp = 400;
+        state.barricadeHp = 400;
+        state.barricadeZapTimer = 0;
+        state.coolingLevel = 0;
+        state.magnetLevel = 0;
+        state.shakeTime = 0;
+        state.shakeIntensity = 0;
+        state.gunRecoilX = 0;
+        state.projectiles = [];
+        state.enemyProjectiles = [];
+        state.enemies = [];
+        state.pickups = [];
+        state.acidPools = [];
+        state.particles = [];
+        state.floatingTexts = [];
+        state.decals = [];
+        state.player.x = Math.max(68, Math.floor(getBarricadeX() * 0.46));
+        state.player.y = Math.floor(state.height * 0.58);
+        state.player.invulnTimer = 0;
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('gameover-screen').classList.remove('active');
+        document.getElementById('menu-modal').classList.remove('active');
+        document.getElementById('boss-hud').classList.remove('active');
+        AudioEngine.init();
+        showWaveBanner('HULLÁM 1 // RAJ KÖZELEDIK');
+        updateHud();
+      }
+
+      function startWave(nextWave) {
+        state.wave = nextWave;
+        state.waveKills = 0;
+        state.waveTargetKills = 9 + nextWave * 4;
+        state.spawnTimer = 0.4;
+        if (state.barricadeHp > 0) {
+          state.barricadeHp = Math.min(state.barricadeMaxHp, state.barricadeHp + Math.round(state.barricadeMaxHp * 0.15));
+        }
+        showWaveBanner(nextWave % 5 === 0 ? `⚠ HULLÁM ${nextWave} // LEVIATHAN BOSS` : `HULLÁM ${nextWave}`);
+      }
+
+      function pickEnemyTypeForWave() {
+        const w = state.wave;
+        if (w % 5 === 0 && state.bossSpawnedForWave !== w) {
+          state.bossSpawnedForWave = w;
+          return 'boss';
+        }
+        const pool = ['swarmer'];
+        if (w >= 1) pool.push('spitter');
+        if (w >= 2) pool.push('brute', 'bomber');
+        if (w >= 3) pool.push('stalker', 'carrier');
+        if (w >= 4) pool.push('wraith', 'screamer');
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      function spawnEnemy(forcedType = null) {
+        const typeKey = forcedType || pickEnemyTypeForWave();
+        const base = ENEMY_TYPES[typeKey] || ENEMY_TYPES.swarmer;
+        const scaleHp = 1 + (state.wave - 1) * 0.16;
+        const scaleDmg = 1 + (state.wave - 1) * 0.08;
+        const floorTop = Math.floor(state.height * 0.25);
+        const floorBottom = Math.floor(state.height * 0.89);
+        const enemy = {
+          typeKey,
+          name: base.name,
+          hp: Math.round(base.hp * scaleHp),
+          maxHp: Math.round(base.hp * scaleHp),
+          speed: base.speed * (0.94 + Math.random() * 0.14),
+          dmg: Math.round(base.dmg * scaleDmg),
+          barDmg: Math.round(base.barDmg * scaleDmg),
+          radius: base.radius,
+          reward: base.reward + Math.floor(state.wave * 1.5),
+          xp: base.xp,
+          spitType: base.spitType,
+          color: base.color,
+          accent: base.accent,
+          isBoss: Boolean(base.isBoss),
+          x: state.width + 28,
+          y: floorTop + Math.random() * Math.max(40, floorBottom - floorTop),
+          animTimer: Math.random(),
+          animFrame: 0,
+          attackCooldown: 1.1 + Math.random() * 1.1,
+          phaseTimer: 2.2 + Math.random() * 1.5,
+          hitFlash: 0,
+          devourTargetX: 0,
+          devourTargetY: 0
+        };
+        state.enemies.push(enemy);
+        if (enemy.isBoss) {
+          document.getElementById('boss-hud').classList.add('active');
+          document.getElementById('boss-name').textContent = `☠ ${enemy.name}`;
+          AudioEngine.playMonsterGrowl();
+        }
+      }
+
+      function spawnParticles(x, y, count, color, speedMin = 40, speedMax = 210, life = 0.35, size = 3) {
+        for (let i = 0; i < count; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const spd = speedMin + Math.random() * (speedMax - speedMin);
+          state.particles.push({
+            x, y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            life: life * (0.65 + Math.random() * 0.6),
+            maxLife: life,
+            color,
+            size: size * (0.7 + Math.random() * 0.7)
+          });
+        }
+      }
+
+      function fireWeapon() {
+        if (!state.running || state.paused || state.gameOver || state.devouring) return;
+        const w = getCurrentWeapon();
+        if (state.fireCooldown > 0) return;
+        if (state.weaponHeat >= 99.5) {
+          state.fireCooldown = 0.25;
+          addFloatingText(state.player.x + 12, state.player.y - 28, 'TÚLMELEGEDVE!', '#f87171');
+          return;
+        }
+        AudioEngine.init();
+        AudioEngine.playWeapon(w.id);
+        const coolingMult = Math.max(0.45, 1 - state.coolingLevel * 0.14);
+        state.fireCooldown = w.fireRate;
+        state.weaponHeat = Math.min(100, state.weaponHeat + w.heatPerShot * coolingMult);
+        state.muzzleFlash = 0.065;
+        if (w.shake > 0) triggerShake(w.shake, 0.11);
+        else state.gunRecoilX = -2.2;
+
+        const muzzleX = state.player.x + 28;
+        const muzzleY = state.player.y - 4;
+        let aimAngle = 0;
+        let bestDy = 52;
+        for (const e of state.enemies) {
+          if (e.x > muzzleX) {
+            const dy = e.y - muzzleY;
+            if (Math.abs(dy) < bestDy) {
+              bestDy = Math.abs(dy);
+              aimAngle = Math.atan2(dy, e.x - muzzleX) * 0.35;
+            }
+          }
+        }
+
+        if (w.id === 'smg_9mm' || w.id === 'pipe_shotgun') {
+          state.particles.push({
+            x: state.player.x + 14, y: state.player.y - 10,
+            vx: -30 - Math.random() * 45, vy: -95 - Math.random() * 60,
+            life: 0.45, maxLife: 0.45, color: '#facc15', size: 3, gravity: 340
+          });
+        }
+        spawnParticles(muzzleX, muzzleY, w.id === 'pipe_shotgun' ? 8 : 4, w.color, 50, 190, 0.14, 3);
+
+        if (w.id === 'hyper_railgun') {
+          const endX = state.width + 20;
+          state.projectiles.push({
+            kind: 'beam', x: muzzleX, y: muzzleY, endX,
+            endY: muzzleY + Math.tan(aimAngle) * (endX - muzzleX),
+            damage: w.damage, splash: w.splash, color: w.color,
+            life: 0.22, maxLife: 0.22, hitIds: new Set()
+          });
+          for (const e of state.enemies) {
+            if (e.x >= muzzleX && Math.abs(e.y - muzzleY) <= e.radius + 26) {
+              damageEnemy(e, w.damage, true);
+              if (w.splash > 0) applySplashDamage(e.x, e.y, w.splash, w.damage * 0.45, e);
+            }
+          }
+          return;
+        }
+
+        for (let i = 0; i < w.pellets; i++) {
+          const angle = aimAngle + (Math.random() - 0.5) * w.spread;
+          state.projectiles.push({
+            kind: w.id === 'plasma_cannon' ? 'plasma' : (w.id === 'pulse_rifle' ? 'pulse' : 'bullet'),
+            x: muzzleX, y: muzzleY,
+            vx: Math.cos(angle) * w.speed, vy: Math.sin(angle) * w.speed,
+            damage: w.damage, splash: w.splash, pierceLeft: w.pierce,
+            color: w.color, rot: 0, hitIds: new Set()
+          });
+        }
+      }
+
+      function applySplashDamage(cx, cy, radius, dmg, ignoreEnemy = null) {
+        spawnParticles(cx, cy, 16, '#4ade80', 60, 260, 0.42, 4);
+        spawnParticles(cx, cy, 10, '#fb923c', 40, 190, 0.35, 3);
+        for (const e of state.enemies) {
+          if (e === ignoreEnemy) continue;
+          if (Math.hypot(e.x - cx, e.y - cy) <= radius + e.radius) damageEnemy(e, dmg, false);
+        }
+      }
+
+      function damageEnemy(enemy, amount, isCrit) {
+        if (!enemy || enemy.hp <= 0) return;
+        const dmg = Math.max(1, Math.round(amount));
+        enemy.hp -= dmg;
+        enemy.hitFlash = 0.08;
+        AudioEngine.playHit(isCrit);
+        addFloatingText(enemy.x, enemy.y - enemy.radius - 6, isCrit ? `${dmg}!` : `${dmg}`, isCrit ? '#fde047' : '#f8fafc');
+        spawnParticles(enemy.x, enemy.y, 4, enemy.accent, 35, 140, 0.22, 2.5);
+        if (enemy.hp <= 0) handleEnemyDeath(enemy);
+      }
+
+      function spawnPickup(x, y, kind, value) {
+        state.pickups.push({
+          x, y, vx: (Math.random() - 0.5) * 90, vy: -60 - Math.random() * 50,
+          kind, value, bob: Math.random() * Math.PI * 2, life: 16
+        });
+      }
+
+      function handleEnemyDeath(enemy) {
+        state.kills++;
+        state.waveKills++;
+        state.score += enemy.xp * 10;
+        addDecal(enemy.x, enemy.y + enemy.radius * 0.65, 'rgba(136, 19, 55, 0.45)', Math.min(26, enemy.radius * 0.9));
+        spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 36 : 12, enemy.color, 50, 240, 0.45, 4);
+
+        if (enemy.typeKey === 'carrier') {
+          for (let i = 0; i < 3; i++) {
+            spawnEnemy('larva');
+            const spawned = state.enemies[state.enemies.length - 1];
+            if (spawned) { spawned.x = enemy.x + (i - 1) * 14; spawned.y = enemy.y + (i - 1) * 10; }
+          }
+        }
+
+        if (enemy.isBoss) {
+          AudioEngine.playExplosion();
+          triggerShake(8, 0.45);
+          document.getElementById('boss-hud').classList.remove('active');
+        }
+
+        const roll = Math.random();
+        if (enemy.isBoss) {
+          for (let i = 0; i < 5; i++) spawnPickup(enemy.x + (i - 2) * 18, enemy.y, 'blood_shard', Math.round(enemy.reward * 0.25));
+          spawnPickup(enemy.x, enemy.y - 12, 'medkit', 45);
+          spawnPickup(enemy.x + 16, enemy.y + 10, 'cell', 50);
+        } else if (roll < 0.14) {
+          spawnPickup(enemy.x, enemy.y, 'medkit', 24);
+        } else if (roll < 0.26) {
+          spawnPickup(enemy.x, enemy.y, 'cell', 28);
+        } else if (roll < 0.48) {
+          spawnPickup(enemy.x, enemy.y, 'blood_shard', Math.max(8, Math.round(enemy.reward * 0.65)));
+        } else if (enemy.reward >= 25) {
+          spawnPickup(enemy.x, enemy.y, 'coin_gold', enemy.reward);
+        } else {
+          spawnPickup(enemy.x, enemy.y, 'coin_bronze', enemy.reward);
+        }
+
+        if (state.waveKills >= state.waveTargetKills && !state.enemies.some(e => e.isBoss)) {
+          startWave(state.wave + 1);
+        }
+      }
+
+      function spawnEnemyProjectile(enemy) {
+        const type = enemy.spitType;
+        if (!type) return;
+        AudioEngine.playSpit(type);
+        const dx = (state.player.x + 10) - enemy.x;
+        const dy = state.player.y - enemy.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const speed = type === 'sonic' ? 235 : (type === 'phase' ? 290 : 215);
+        state.enemyProjectiles.push({
+          type, x: enemy.x - enemy.radius * 0.5, y: enemy.y,
+          vx: (dx / dist) * speed, vy: (dy / dist) * speed,
+          dmg: enemy.dmg, radius: type === 'sonic' ? 14 : (type === 'egg' ? 9 : 7), life: 4.5
+        });
+      }
+
+      function damagePlayer(amount) {
+        if (state.gameOver || state.devouring || state.player.invulnTimer > 0) return;
+        let rem = Math.max(1, Math.round(amount));
+        state.shieldRegenDelay = 3.6;
+        if (state.shield > 0) {
+          const absorbed = Math.min(state.shield, rem);
+          state.shield -= absorbed;
+          rem -= absorbed;
+          spawnParticles(state.player.x, state.player.y, 6, '#38bdf8', 40, 150, 0.25, 3);
+        }
+        if (rem > 0) {
+          state.hp = Math.max(0, state.hp - rem);
+          state.player.invulnTimer = 0.42;
+          triggerShake(4.2, 0.16);
+          addDecal(state.player.x, state.player.y + 18, 'rgba(185, 28, 28, 0.52)', 16);
+          spawnParticles(state.player.x, state.player.y, 8, '#ef4444', 50, 180, 0.32, 3);
+          addFloatingText(state.player.x, state.player.y - 26, `-${rem} HP`, '#f87171');
+        }
+        if (state.hp <= 0) startDevourSequence();
+      }
+
+      function startDevourSequence() {
+        if (state.devouring || state.gameOver) return;
+        state.devouring = true;
+        state.devourTimer = 3.2;
+        state.devourStepTimer = 0.25;
+        state.firingManual = false;
+        showWaveBanner('☠ A RAJ FALANCSÁBA KEZDTE A FŐHŐST!');
+        for (let i = 0; i < state.enemies.length; i++) {
+          const e = state.enemies[i];
+          const ang = (i / Math.max(1, state.enemies.length)) * Math.PI * 2;
+          e.devourTargetX = state.player.x + Math.cos(ang) * 26;
+          e.devourTargetY = state.player.y + Math.sin(ang) * 22;
+        }
+      }
+
+      function finishGameOver() {
+        state.devouring = false;
+        state.gameOver = true;
+        state.running = false;
+        document.getElementById('boss-hud').classList.remove('active');
+        document.getElementById('gameover-stats').innerHTML = `
+          <div class="stat-box"><strong>ELÉRT HULLÁM:</strong> ${state.wave}</div>
+          <div class="stat-box"><strong>LEGYŐZÖTT SZÖRNYEK:</strong> ${state.kills}</div>
+          <div class="stat-box"><strong>ÖSSZES KREDIT:</strong> ${state.totalEarned} Cr</div>
+          <div class="stat-box"><strong>PONTSZÁM:</strong> ${state.score}</div>
+        `;
+        document.getElementById('gameover-screen').classList.add('active');
+      }
+
+      function update(dt) {
+        state.time += dt;
+        AudioEngine.updateAmbient(dt);
+        for (const r of state.rainDrops) {
+          r.x -= r.spd * 0.25 * dt;
+          r.y += r.spd * dt;
+          if (r.y > state.height || r.x < -20) {
+            r.x = Math.random() * (state.width + 120);
+            r.y = -15;
+          }
+        }
+        if (state.waveBannerTimer > 0) {
+          state.waveBannerTimer -= dt;
+          if (state.waveBannerTimer <= 0) document.getElementById('wave-banner').classList.remove('show');
+        }
+        if (state.shakeTime > 0) {
+          state.shakeTime -= dt;
+          if (state.shakeTime <= 0) state.shakeIntensity = 0;
+        }
+        state.gunRecoilX *= Math.pow(0.001, dt);
+
+        if (state.devouring) {
+          state.devourTimer -= dt;
+          state.devourStepTimer -= dt;
+          for (const e of state.enemies) {
+            const dx = e.devourTargetX - e.x;
+            const dy = e.devourTargetY - e.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 4) {
+              e.x += (dx / dist) * 140 * dt;
+              e.y += (dy / dist) * 140 * dt;
+            } else {
+              e.x += Math.sin(state.time * 28 + e.y) * 18 * dt;
+              e.y += Math.cos(state.time * 25 + e.x) * 18 * dt;
+            }
+            e.animTimer += dt * 10;
+            e.animFrame = Math.floor(e.animTimer) % 2;
+          }
+          if (state.devourStepTimer <= 0) {
+            state.devourStepTimer = 0.28;
+            AudioEngine.playDevour();
+            triggerShake(3.0, 0.12);
+            addDecal(state.player.x + (Math.random() - 0.5) * 20, state.player.y + (Math.random() - 0.5) * 18, 'rgba(153, 27, 27, 0.65)', 18);
+            spawnParticles(state.player.x, state.player.y, 10, '#dc2626', 40, 170, 0.45, 4);
+            spawnParticles(state.player.x, state.player.y, 5, '#fca5a5', 25, 110, 0.35, 3);
+          }
+          updateParticlesAndTexts(dt);
+          if (state.devourTimer <= 0) finishGameOver();
+          return;
+        }
+
+        if (!state.running || state.paused || state.gameOver) return;
+
+        if (state.maxShield > 0 && state.shield < state.maxShield) {
+          if (state.shieldRegenDelay > 0) state.shieldRegenDelay -= dt;
+          else state.shield = Math.min(state.maxShield, state.shield + 9 * dt);
+        }
+
+        const coolRate = 18 + state.coolingLevel * 7;
+        state.weaponHeat = Math.max(0, state.weaponHeat - coolRate * dt);
+        if (state.fireCooldown > 0) state.fireCooldown -= dt;
+        if (state.muzzleFlash > 0) state.muzzleFlash -= dt;
+        if (state.player.invulnTimer > 0) state.player.invulnTimer -= dt;
+        if (state.barricadeZapTimer > 0) state.barricadeZapTimer -= dt;
+
+        let ix = joyState.vx;
+        let iy = joyState.vy;
+        if (state.keys.has('KeyA') || state.keys.has('ArrowLeft')) ix -= 1;
+        if (state.keys.has('KeyD') || state.keys.has('ArrowRight')) ix += 1;
+        if (state.keys.has('KeyW') || state.keys.has('ArrowUp')) iy -= 1;
+        if (state.keys.has('KeyS') || state.keys.has('ArrowDown')) iy += 1;
+        const mag = Math.hypot(ix, iy);
+        if (mag > 1) { ix /= mag; iy /= mag; }
+
+        const armor = getArmorConfig();
+        const moveSpeed = 225 * armor.speedMult;
+        const floorTop = Math.floor(state.height * 0.25);
+        const floorBottom = Math.floor(state.height * 0.89);
+        const minX = 48;
+        const maxX = Math.max(minX + 40, getBarricadeX() - 34);
+        state.player.x = Math.max(minX, Math.min(maxX, state.player.x + ix * moveSpeed * dt));
+        state.player.y = Math.max(floorTop + 18, Math.min(floorBottom - 12, state.player.y + iy * moveSpeed * dt));
+
+        if (mag > 0.08) {
+          state.player.walkTimer += dt * (8 + mag * 5);
+          state.player.walkFrame = Math.floor(state.player.walkTimer) % 3;
+        } else {
+          state.player.walkFrame = 0;
+        }
+
+        if (state.autoFire || state.firingManual || state.keys.has('Space')) fireWeapon();
+
+        state.spawnTimer -= dt;
+        if (state.spawnTimer <= 0 && state.enemies.length < 7 + state.wave * 2) {
+          spawnEnemy();
+          state.spawnTimer = Math.max(0.55, 1.85 - state.wave * 0.11);
+        }
+
+        for (let i = state.projectiles.length - 1; i >= 0; i--) {
+          const p = state.projectiles[i];
+          if (p.kind === 'beam') {
+            p.life -= dt;
+            if (p.life <= 0) state.projectiles.splice(i, 1);
+            continue;
+          }
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.rot += 14 * dt;
+          if (p.x > state.width + 60 || p.x < -60 || p.y < -60 || p.y > state.height + 60) {
+            state.projectiles.splice(i, 1);
+            continue;
+          }
+          for (let j = state.enemies.length - 1; j >= 0; j--) {
+            const e = state.enemies[j];
+            if (p.hitIds.has(e)) continue;
+            if (Math.hypot(p.x - e.x, p.y - e.y) <= e.radius + 8) {
+              p.hitIds.add(e);
+              damageEnemy(e, p.damage, p.kind === 'plasma');
+              if (p.splash > 0) applySplashDamage(p.x, p.y, p.splash, p.damage * 0.45, e);
+              p.pierceLeft--;
+              if (p.pierceLeft <= 0) {
+                state.projectiles.splice(i, 1);
+                break;
+              }
+            }
+          }
+        }
+
+        for (let i = state.acidPools.length - 1; i >= 0; i--) {
+          const pool = state.acidPools[i];
+          pool.life -= dt;
+          if (pool.life <= 0) { state.acidPools.splice(i, 1); continue; }
+          if (Math.hypot(state.player.x - pool.x, state.player.y - pool.y) < pool.radius + 12) damagePlayer(12 * dt);
+        }
+
+        const barX = getBarricadeX();
+        const barActive = state.barricadeHp > 0;
+        let bossRef = null;
+
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+          const e = state.enemies[i];
+          if (e.hp <= 0) { state.enemies.splice(i, 1); continue; }
+          if (e.isBoss) bossRef = e;
+          if (e.hitFlash > 0) e.hitFlash -= dt;
+          e.animTimer += dt * (e.speed / 24);
+          e.animFrame = Math.floor(e.animTimer) % 2;
+
+          let vyOffset = 0;
+          if (e.typeKey === 'wraith') {
+            vyOffset = Math.cos(state.time * 4 + e.y * 0.03) * 45;
+            e.phaseTimer -= dt;
+            if (e.phaseTimer <= 0 && e.x > barX + 60) {
+              e.phaseTimer = 2.8;
+              e.x -= 48;
+              spawnParticles(e.x, e.y, 10, '#c084fc', 30, 120, 0.3, 3);
+            }
+          } else if (e.typeKey === 'screamer') {
+            vyOffset = Math.sin(state.time * 2.5 + i) * 32;
+          }
+
+          if (e.spitType && e.x < state.width - 50 && e.x > barX + 30) {
+            e.attackCooldown -= dt;
+            if (e.attackCooldown <= 0) {
+              e.attackCooldown = e.isBoss ? 1.55 : 2.35;
+              spawnEnemyProjectile(e);
+            }
+          }
+
+          const stopAtBar = barActive && e.typeKey !== 'wraith' && (e.x - e.radius) <= barX + 12;
+          if (stopAtBar) {
+            e.x = barX + 12 + e.radius;
+            e.attackCooldown -= dt;
+            if (e.attackCooldown <= 0) {
+              e.attackCooldown = 0.85;
+              state.barricadeHp = Math.max(0, state.barricadeHp - e.barDmg);
+              state.barricadeZapTimer = 0.14;
+              spawnParticles(barX + 6, e.y, 6, '#f59e0b', 40, 150, 0.25, 3);
+              if (e.typeKey === 'bomber') {
+                state.barricadeHp = Math.max(0, state.barricadeHp - e.barDmg * 1.4);
+                applySplashDamage(e.x, e.y, 85, e.dmg * 0.7, e);
+                damageEnemy(e, 9999, false);
+                continue;
+              }
+              if (state.barricadeLevel >= 2) damageEnemy(e, 7 * (state.barricadeLevel - 1), false);
+            }
+          } else {
+            e.x -= e.speed * dt;
+            e.y += vyOffset * dt;
+            e.y = Math.max(Math.floor(state.height * 0.25) + e.radius, Math.min(Math.floor(state.height * 0.89) - e.radius, e.y));
+          }
+
+          if (Math.hypot(e.x - state.player.x, e.y - state.player.y) < e.radius + 16) {
+            damagePlayer(e.dmg);
+            if (e.typeKey === 'bomber') {
+              applySplashDamage(e.x, e.y, 80, e.dmg, e);
+              damageEnemy(e, 9999, false);
+            } else {
+              e.x += 22;
+            }
+          }
+        }
+
+        if (bossRef) {
+          const pct = Math.max(0, Math.round((bossRef.hp / bossRef.maxHp) * 100));
+          document.getElementById('boss-hp-txt').textContent = `${pct}%`;
+          document.getElementById('boss-fill').style.width = `${pct}%`;
+        } else {
+          document.getElementById('boss-hud').classList.remove('active');
+        }
+
+        for (let i = state.enemyProjectiles.length - 1; i >= 0; i--) {
+          const ep = state.enemyProjectiles[i];
+          ep.x += ep.vx * dt;
+          ep.y += ep.vy * dt;
+          ep.life -= dt;
+          if (ep.life <= 0 || ep.x < -40 || ep.x > state.width + 40) { state.enemyProjectiles.splice(i, 1); continue; }
+          if (barActive && ep.type !== 'sonic' && ep.x <= barX + 10 && ep.x >= barX - 10) {
+            state.barricadeHp = Math.max(0, state.barricadeHp - Math.round(ep.dmg * 0.5));
+            spawnParticles(ep.x, ep.y, 5, ep.type === 'acid' ? '#84cc16' : '#f43f5e', 30, 120, 0.22, 3);
+            state.enemyProjectiles.splice(i, 1);
+            continue;
+          }
+          if (Math.hypot(ep.x - state.player.x, ep.y - state.player.y) < ep.radius + 14) {
+            damagePlayer(ep.dmg);
+            if (ep.type === 'acid') state.acidPools.push({ x: ep.x, y: ep.y + 8, radius: 26, life: 4.5 });
+            else if (ep.type === 'egg') {
+              spawnEnemy('larva');
+              const l = state.enemies[state.enemies.length - 1];
+              if (l) { l.x = ep.x + 10; l.y = ep.y; }
+            } else if (ep.type === 'phase') state.shieldRegenDelay = Math.max(state.shieldRegenDelay, 5.5);
+            state.enemyProjectiles.splice(i, 1);
+          }
+        }
+
+        const magnetRadius = 75 + state.magnetLevel * 55;
+        for (let i = state.pickups.length - 1; i >= 0; i--) {
+          const pk = state.pickups[i];
+          pk.life -= dt;
+          pk.bob += dt * 5;
+          pk.x += pk.vx * dt;
+          pk.y += pk.vy * dt;
+          pk.vx *= 0.92;
+          pk.vy = pk.vy * 0.92 + 120 * dt;
+          pk.y = Math.min(Math.floor(state.height * 0.88), pk.y);
+          if (pk.life <= 0) { state.pickups.splice(i, 1); continue; }
+          const dx = state.player.x - pk.x;
+          const dy = state.player.y - pk.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < magnetRadius && dist > 1) {
+            pk.x += (dx / dist) * 260 * dt;
+            pk.y += (dy / dist) * 260 * dt;
+          }
+          if (dist < 28) {
+            AudioEngine.playPickup(pk.kind);
+            if (pk.kind === 'medkit') {
+              state.hp = Math.min(state.maxHp, state.hp + pk.value);
+              addFloatingText(state.player.x, state.player.y - 24, `+${pk.value} HP`, '#34d399');
+            } else if (pk.kind === 'cell') {
+              state.shield = Math.min(state.maxShield, state.shield + pk.value);
+              state.weaponHeat = Math.max(0, state.weaponHeat - 45);
+              addFloatingText(state.player.x, state.player.y - 24, `+${pk.value} PAJZS & HŰTÉS`, '#38bdf8');
+            } else if (pk.kind === 'blood_shard') {
+              state.coins += pk.value;
+              state.totalEarned += pk.value;
+              state.score += pk.value * 4;
+              addFloatingText(pk.x, pk.y - 12, `+${pk.value} Cr ♦`, '#fb7185');
+            } else {
+              state.coins += pk.value;
+              state.totalEarned += pk.value;
+              state.score += pk.value * 3;
+              addFloatingText(pk.x, pk.y - 12, `+${pk.value} Cr`, '#fbbf24');
+            }
+            state.pickups.splice(i, 1);
+          }
+        }
+
+        updateParticlesAndTexts(dt);
+        updateHud();
+      }
+
+      function updateParticlesAndTexts(dt) {
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const pt = state.particles[i];
+          pt.life -= dt;
+          if (pt.life <= 0) { state.particles.splice(i, 1); continue; }
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          if (pt.gravity) pt.vy += pt.gravity * dt;
+        }
+        for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = state.floatingTexts[i];
+          ft.life -= dt;
+          ft.y -= 34 * dt;
+          if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+        }
+      }
+
+      function render() {
+        const w = state.width;
+        const h = state.height;
+        const floorTop = Math.floor(h * 0.24);
+        const floorBottom = Math.floor(h * 0.90);
+
+        ctx.save();
+        if (state.shakeTime > 0 && state.shakeIntensity > 0) {
+          ctx.translate((Math.random() * 2 - 1) * state.shakeIntensity, (Math.random() * 2 - 1) * state.shakeIntensity);
+        }
+
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, floorTop);
+        skyGrad.addColorStop(0, '#04060b');
+        skyGrad.addColorStop(0.55, '#0b1220');
+        skyGrad.addColorStop(1, '#111827');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, floorTop);
+
+        for (let i = 0; i < 38; i++) {
+          const sx = ((i * 197 + Math.floor(state.time * 4)) % w);
+          const sy = ((i * 73) % Math.max(40, floorTop - 16));
+          ctx.fillStyle = i % 5 === 0 ? 'rgba(125, 211, 252, 0.7)' : 'rgba(226, 232, 240, 0.35)';
+          ctx.fillRect(sx, sy, 2, 2);
+        }
+
+        const wreckX = Math.floor(w * 0.66);
+        const wreckY = Math.floor(floorTop * 0.52);
+        ctx.fillStyle = '#090d16';
+        ctx.beginPath();
+        ctx.moveTo(wreckX - 70, wreckY + 8);
+        ctx.lineTo(wreckX + 20, wreckY - 18);
+        ctx.lineTo(wreckX + 68, wreckY + 4);
+        ctx.lineTo(wreckX + 35, wreckY + 22);
+        ctx.lineTo(wreckX - 55, wreckY + 24);
+        ctx.closePath();
+        ctx.fill();
+        const glowPulse = 0.45 + 0.35 * Math.sin(state.time * 7);
+        ctx.fillStyle = `rgba(239, 68, 68, ${glowPulse})`;
+        ctx.fillRect(wreckX - 18, wreckY - 4, 8, 5);
+        ctx.fillRect(wreckX + 16, wreckY + 4, 6, 4);
+
+        const beaconAlpha = 0.05 + 0.05 * Math.sin(state.time * 5.5);
+        const beaconGrad = ctx.createRadialGradient(w * 0.45, 10, 6, w * 0.45, floorTop + 80, 260);
+        beaconGrad.addColorStop(0, `rgba(239, 68, 68, ${beaconAlpha * 2.2})`);
+        beaconGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = beaconGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        const floorGrad = ctx.createLinearGradient(0, floorTop, 0, h);
+        floorGrad.addColorStop(0, '#0c131f');
+        floorGrad.addColorStop(0.5, '#080c14');
+        floorGrad.addColorStop(1, '#04060a');
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, floorTop, w, h - floorTop);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx < w; gx += 64) {
+          ctx.beginPath();
+          ctx.moveTo(gx, floorTop);
+          ctx.lineTo(gx - 18, floorBottom);
+          ctx.stroke();
+        }
+        for (let gy = floorTop; gy <= floorBottom; gy += 36) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(w, gy);
+          ctx.stroke();
+        }
+
+        for (const d of state.decals) {
+          ctx.fillStyle = d.color;
+          ctx.beginPath();
+          ctx.ellipse(d.x, d.y, d.radius, d.radius * 0.42, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (const pool of state.acidPools) {
+          ctx.fillStyle = 'rgba(132, 204, 22, 0.35)';
+          ctx.beginPath();
+          ctx.ellipse(pool.x, pool.y, pool.radius, pool.radius * 0.45, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(190, 242, 100, 0.65)';
+          ctx.stroke();
+        }
+
+        const barX = getBarricadeX();
+        if (state.barricadeHp > 0) {
+          const barRatio = state.barricadeHp / state.barricadeMaxHp;
+          ctx.save();
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(barX - 10, floorTop - 6, 20, floorBottom - floorTop + 14);
+          ctx.fillStyle = state.barricadeZapTimer > 0 ? '#f8fafc' : '#1e293b';
+          ctx.fillRect(barX - 7, floorTop + 4, 14, floorBottom - floorTop - 6);
+          ctx.strokeStyle = barRatio > 0.35 ? '#f59e0b' : '#ef4444';
+          ctx.lineWidth = 2;
+          for (let y = floorTop + 12; y < floorBottom - 8; y += 22) {
+            ctx.beginPath();
+            ctx.moveTo(barX - 6, y);
+            ctx.lineTo(barX + 6, y + 9);
+            ctx.stroke();
+          }
+          const energyAlpha = 0.22 + 0.14 * Math.sin(state.time * 10);
+          ctx.strokeStyle = `rgba(56, 189, 248, ${energyAlpha})`;
+          ctx.lineWidth = 2 + Math.min(3, state.barricadeLevel);
+          ctx.beginPath();
+          ctx.moveTo(barX + 10, floorTop + 2);
+          ctx.lineTo(barX + 10, floorBottom);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.45)';
+          ctx.fillRect(barX - 8, floorBottom - 16, 16, 18);
+        }
+
+        for (const pk of state.pickups) {
+          const py = pk.y + Math.sin(pk.bob) * 4;
+          ctx.save();
+          if (pk.kind === 'medkit') {
+            ctx.fillStyle = '#065f46';
+            ctx.fillRect(pk.x - 8, py - 8, 16, 16);
+            ctx.fillStyle = '#34d399';
+            ctx.fillRect(pk.x - 2, py - 6, 4, 12);
+            ctx.fillRect(pk.x - 6, py - 2, 12, 4);
+          } else if (pk.kind === 'cell') {
+            ctx.fillStyle = '#075985';
+            ctx.fillRect(pk.x - 7, py - 9, 14, 18);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(pk.x - 4, py - 5, 8, 10);
+          } else if (pk.kind === 'blood_shard') {
+            ctx.fillStyle = '#fb7185';
+            ctx.beginPath();
+            ctx.moveTo(pk.x, py - 9);
+            ctx.lineTo(pk.x + 8, py);
+            ctx.lineTo(pk.x, py + 9);
+            ctx.lineTo(pk.x - 8, py);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.fillStyle = pk.kind === 'coin_gold' ? '#f59e0b' : '#d97706';
+            ctx.beginPath();
+            ctx.arc(pk.x, py, pk.kind === 'coin_gold' ? 8 : 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        const renderables = [{ sortY: state.player.y, draw: drawPlayer }];
+        for (const e of state.enemies) renderables.push({ sortY: e.y, draw: () => drawEnemy(e) });
+        renderables.sort((a, b) => a.sortY - b.sortY);
+        for (const item of renderables) item.draw();
+
+        for (const p of state.projectiles) {
+          if (p.kind === 'beam') {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(232, 121, 249, 0.35)';
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.endX, p.endY);
+            ctx.stroke();
+            ctx.strokeStyle = '#f5d0fe';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.endX, p.endY);
+            ctx.stroke();
+            ctx.restore();
+            continue;
+          }
+          if (p.kind === 'plasma') {
+            ctx.save();
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fb923c';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 13, p.rot, p.rot + Math.PI * 1.3);
+            ctx.stroke();
+            ctx.restore();
+          } else if (p.kind === 'pulse') {
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(p.x - 10, p.y - 2.5, 20, 5);
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fillRect(p.x - 4, p.y - 1.5, 10, 3);
+          } else {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x - 5, p.y - 2, 10, 4);
+          }
+        }
+
+        for (const ep of state.enemyProjectiles) {
+          ctx.save();
+          if (ep.type === 'acid') {
+            ctx.fillStyle = '#84cc16';
+            ctx.beginPath();
+            ctx.arc(ep.x, ep.y, ep.radius, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (ep.type === 'egg') {
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.ellipse(ep.x, ep.y, 9, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(ep.x - 2, ep.y - 2, 4, 4);
+          } else if (ep.type === 'phase') {
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(ep.x + 8, ep.y - 5);
+            ctx.lineTo(ep.x, ep.y + 4);
+            ctx.lineTo(ep.x - 8, ep.y - 4);
+            ctx.stroke();
+          } else if (ep.type === 'sonic') {
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(ep.x, ep.y, ep.radius, -0.8, 0.8);
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(ep.x - 12, ep.y);
+            ctx.lineTo(ep.x + 6, ep.y - 5);
+            ctx.lineTo(ep.x + 6, ep.y + 5);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        for (const pt of state.particles) {
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+          ctx.fillStyle = pt.color;
+          ctx.fillRect(pt.x - pt.size * 0.5, pt.y - pt.size * 0.5, pt.size, pt.size);
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+        ctx.lineWidth = 1;
+        for (const r of state.rainDrops) {
+          ctx.beginPath();
+          ctx.moveTo(r.x, r.y);
+          ctx.lineTo(r.x - r.len * 0.25, r.y + r.len);
+          ctx.stroke();
+        }
+
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        for (const ft of state.floatingTexts) {
+          ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+          ctx.fillStyle = '#000';
+          ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      function drawPlayer() {
+        const px = state.player.x + state.gunRecoilX;
+        const py = state.player.y;
+        const sprite = getHeroSprite(state.armorTier, state.player.walkFrame);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(px, py + 24, 18, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (state.shield > 0) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(px + 2, py + 2, 24, 30, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        const beamGrad = ctx.createLinearGradient(px + 24, py - 4, px + 360, py - 4);
+        beamGrad.addColorStop(0, 'rgba(224, 242, 254, 0.16)');
+        beamGrad.addColorStop(1, 'rgba(224, 242, 254, 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(px + 24, py - 8);
+        ctx.lineTo(px + 360, py - 65);
+        ctx.lineTo(px + 360, py + 58);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.drawImage(sprite, Math.round(px - sprite.width * 0.5), Math.round(py - sprite.height * 0.52));
+
+        const w = getCurrentWeapon();
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px + 8, py - 7, 18, 5);
+        if (state.muzzleFlash > 0) {
+          ctx.fillStyle = w.color;
+          ctx.beginPath();
+          ctx.arc(px + 29, py - 4.5, 9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawEnemy(enemy) {
+        const sprite = getEnemySprite(enemy.typeKey, enemy.animFrame);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(enemy.x, enemy.y + enemy.radius + 4, enemy.radius * 0.85, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.drawImage(sprite, Math.round(enemy.x - sprite.width * 0.5), Math.round(enemy.y - sprite.height * 0.55));
+        if (enemy.hitFlash > 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.radius * 0.85, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (!enemy.isBoss && enemy.hp < enemy.maxHp) {
+          const bw = Math.max(22, enemy.radius * 1.4);
+          const ratio = Math.max(0, enemy.hp / enemy.maxHp);
+          ctx.fillStyle = 'rgba(0,0,0,0.75)';
+          ctx.fillRect(enemy.x - bw * 0.5, enemy.y - enemy.radius - 13, bw, 4);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(enemy.x - bw * 0.5, enemy.y - enemy.radius - 13, bw * ratio, 4);
+        }
+      }
+
+      function hasAffordableUpgrade() {
+        for (const w of WEAPONS) {
+          if (!state.unlockedWeapons.includes(w.id) && state.coins >= w.cost) return true;
+        }
+        const nextArmor = ARMOR_TIERS[state.armorTier + 1];
+        if (nextArmor && state.coins >= nextArmor.cost) return true;
+        const barCost = 110 + (state.barricadeLevel - 1) * 95;
+        if (state.barricadeLevel < 4 && state.coins >= barCost) return true;
+        return false;
+      }
+
+      function updateHud() {
+        const w = getCurrentWeapon();
+        document.getElementById('hud-hp-txt').textContent = `${Math.ceil(state.hp)} / ${state.maxHp}`;
+        document.getElementById('hp-fill').style.width = `${Math.max(0, (state.hp / state.maxHp) * 100)}%`;
+        document.getElementById('hud-shd-txt').textContent = `${Math.ceil(state.shield)} / ${state.maxShield}`;
+        document.getElementById('shield-fill').style.width = state.maxShield > 0 ? `${Math.max(0, (state.shield / state.maxShield) * 100)}%` : '0%';
+        document.getElementById('hud-bar-txt').textContent = `${Math.ceil(state.barricadeHp)} / ${state.barricadeMaxHp}`;
+        document.getElementById('barricade-fill').style.width = `${Math.max(0, (state.barricadeHp / state.barricadeMaxHp) * 100)}%`;
+        document.getElementById('hud-weap-txt').textContent = w.name.split(' ').slice(-1)[0].toUpperCase();
+        document.getElementById('heat-fill').style.width = `${Math.min(100, state.weaponHeat)}%`;
+        document.getElementById('hud-wave-txt').textContent = `W${state.wave}`;
+        document.getElementById('hud-coins-txt').textContent = `${state.coins} Cr`;
+        document.getElementById('modal-coins').textContent = `${state.coins} Cr`;
+        document.getElementById('shop-badge').classList.toggle('show', hasAffordableUpgrade());
+        if (state.showDiag) {
+          document.getElementById('diag-box').innerHTML =
+            `FPS: ${state.fps} | DPR: ${state.dpr.toFixed(1)}<br/>` +
+            `RES: ${state.width}x${state.height} | ENEMIES: ${state.enemies.length}<br/>` +
+            `ARMOR T${state.armorTier} | BAR LV.${state.barricadeLevel}`;
+        }
+      }
+
+      let activeTab = 'weapons';
+      const menuModal = document.getElementById('menu-modal');
+
+      function openMenu() {
+        state.paused = true;
+        menuModal.classList.add('active');
+        renderModalTab();
+      }
+
+      function closeMenu() {
+        menuModal.classList.remove('active');
+        state.paused = false;
+      }
+
+      function renderModalTab() {
+        const container = document.getElementById('modal-items');
+        container.innerHTML = '';
+        document.getElementById('modal-coins').textContent = `${state.coins} Cr`;
+
+        if (activeTab === 'weapons') {
+          for (const w of WEAPONS) {
+            const owned = state.unlockedWeapons.includes(w.id);
+            const equipped = state.currentWeaponId === w.id;
+            const card = document.createElement('div');
+            card.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
+            card.innerHTML = `
+              <div>
+                <div class="item-name">MK.${w.tier} // ${w.name}</div>
+                <div class="item-desc">${w.desc}</div>
+                <div class="item-stats">Sebzés: ${w.damage} • Tűzgyorsaság: ${(1 / w.fireRate).toFixed(1)}/s</div>
+              </div>
+              <div class="item-actions"></div>
+            `;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            if (owned) {
+              btn.className = `buy-btn ${equipped ? 'selected' : 'equip'}`;
+              btn.textContent = equipped ? 'AKTÍV FEGYVER' : 'KIVÁLASZTÁS';
+              btn.disabled = equipped;
+              btn.addEventListener('click', () => {
+                state.currentWeaponId = w.id;
+                state.weaponHeat = Math.min(state.weaponHeat, 50);
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              });
+            } else {
+              btn.className = 'buy-btn';
+              btn.textContent = `MEGVÁSÁRLÁS (${w.cost} Cr)`;
+              btn.disabled = state.coins < w.cost;
+              btn.addEventListener('click', () => {
+                if (state.coins < w.cost) return;
+                state.coins -= w.cost;
+                state.unlockedWeapons.push(w.id);
+                state.currentWeaponId = w.id;
+                state.weaponHeat = 0;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              });
+            }
+            card.querySelector('.item-actions').appendChild(btn);
+            container.appendChild(card);
+          }
+        } else if (activeTab === 'armor') {
+          for (const a of ARMOR_TIERS) {
+            const unlocked = state.armorTier >= a.tier;
+            const isCurrent = state.armorTier === a.tier;
+            const card = document.createElement('div');
+            card.className = `shop-item ${unlocked ? 'owned' : ''} ${isCurrent ? 'equipped' : ''}`;
+            card.innerHTML = `
+              <div>
+                <div class="item-name">TIER ${a.tier} // ${a.name}</div>
+                <div class="item-desc">${a.desc}</div>
+                <div class="item-stats">HP: ${a.maxHp} • Pajzs: ${a.maxShield} • Sebesség: ${Math.round(a.speedMult * 100)}%</div>
+              </div>
+              <div class="item-actions"></div>
+            `;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            if (unlocked) {
+              btn.className = 'buy-btn selected';
+              btn.textContent = isCurrent ? 'JELENLEGI EXOSUIT' : 'ALAPSZINT';
+              btn.disabled = true;
+            } else {
+              btn.className = 'buy-btn';
+              btn.textContent = `FEJLESZTÉS (${a.cost} Cr)`;
+              btn.disabled = state.coins < a.cost || state.armorTier !== a.tier - 1;
+              btn.addEventListener('click', () => {
+                if (state.coins < a.cost || state.armorTier !== a.tier - 1) return;
+                state.coins -= a.cost;
+                state.armorTier = a.tier;
+                state.maxHp = a.maxHp;
+                state.hp = a.maxHp;
+                state.maxShield = a.maxShield;
+                state.shield = a.maxShield;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              });
+            }
+            card.querySelector('.item-actions').appendChild(btn);
+            container.appendChild(card);
+          }
+        } else if (activeTab === 'barricade') {
+          const barUpgradeCost = 110 + (state.barricadeLevel - 1) * 95;
+          const repairCost = 35;
+          const coolCost = 95 + state.coolingLevel * 80;
+          const magCost = 85 + state.magnetLevel * 75;
+          const cards = [
+            {
+              title: `🚧 Barikád Fal (SZINT ${state.barricadeLevel}/4)`,
+              desc: 'Fizikai akadály és plazma-védővonal. Magasabb szinten elektromos ívvel sebzi a falat támadó szörnyeket.',
+              stats: `Max HP: ${state.barricadeMaxHp} • Ív-sebzés: ${state.barricadeLevel >= 2 ? 7 * (state.barricadeLevel - 1) : 0}`,
+              btnText: state.barricadeLevel >= 4 ? 'MAX SZINT' : `SZINTLÉPÉS (${barUpgradeCost} Cr)`,
+              disabled: state.barricadeLevel >= 4 || state.coins < barUpgradeCost,
+              onClick: () => {
+                if (state.barricadeLevel >= 4 || state.coins < barUpgradeCost) return;
+                state.coins -= barUpgradeCost;
+                state.barricadeLevel++;
+                state.barricadeMaxHp += 220;
+                state.barricadeHp = state.barricadeMaxHp;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              }
+            },
+            {
+              title: '🔧 Barikád Javítás (+50% HP)',
+              desc: 'Gyors hegesztés és energiarács-visszatöltés a megrongálódott barikádon.',
+              stats: `Jelenlegi: ${Math.ceil(state.barricadeHp)} / ${state.barricadeMaxHp}`,
+              btnText: `JAVÍTÁS (${repairCost} Cr)`,
+              disabled: state.coins < repairCost || state.barricadeHp >= state.barricadeMaxHp,
+              onClick: () => {
+                if (state.coins < repairCost || state.barricadeHp >= state.barricadeMaxHp) return;
+                state.coins -= repairCost;
+                state.barricadeHp = Math.min(state.barricadeMaxHp, state.barricadeHp + state.barricadeMaxHp * 0.5);
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              }
+            },
+            {
+              title: `❄️ Fegyverhűtő Rendszer (SZINT ${state.coolingLevel}/3)`,
+              desc: 'Gyorsabban hűti vissza a fegyvereket és csökkenti a lövésenkénti hőtermelést.',
+              stats: `Hűtési bónusz: +${state.coolingLevel * 25}%`,
+              btnText: state.coolingLevel >= 3 ? 'MAX SZINT' : `FEJLESZTÉS (${coolCost} Cr)`,
+              disabled: state.coolingLevel >= 3 || state.coins < coolCost,
+              onClick: () => {
+                if (state.coolingLevel >= 3 || state.coins < coolCost) return;
+                state.coins -= coolCost;
+                state.coolingLevel++;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              }
+            },
+            {
+              title: `🧲 Mágneses Jutalom-Gyűjtő (SZINT ${state.magnetLevel}/3)`,
+              desc: 'Nagyobb távolságból magához vonzza a krediteket, vérszilánkokat, medkiteket és cellákat.',
+              stats: `Vonzási sugár: ${75 + state.magnetLevel * 55} px`,
+              btnText: state.magnetLevel >= 3 ? 'MAX SZINT' : `FEJLESZTÉS (${magCost} Cr)`,
+              disabled: state.magnetLevel >= 3 || state.coins < magCost,
+              onClick: () => {
+                if (state.magnetLevel >= 3 || state.coins < magCost) return;
+                state.coins -= magCost;
+                state.magnetLevel++;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              }
+            }
+          ];
+          for (const c of cards) {
+            const el = document.createElement('div');
+            el.className = 'shop-item';
+            el.innerHTML = `
+              <div>
+                <div class="item-name">${c.title}</div>
+                <div class="item-desc">${c.desc}</div>
+                <div class="item-stats">${c.stats}</div>
+              </div>
+              <div class="item-actions"></div>
+            `;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'buy-btn';
+            btn.textContent = c.btnText;
+            btn.disabled = c.disabled;
+            btn.addEventListener('click', c.onClick);
+            el.querySelector('.item-actions').appendChild(btn);
+            container.appendChild(el);
+          }
+        }
+      }
+
+      const joyState = { active: false, id: null, vx: 0, vy: 0 };
+      const joyZone = document.getElementById('joy-zone');
+      const joyKnob = document.getElementById('joy-knob');
+
+      function updateJoystick(clientX, clientY) {
+        const base = document.getElementById('joy-base').getBoundingClientRect();
+        const cx = base.left + base.width * 0.5;
+        const cy = base.top + base.height * 0.5;
+        const maxR = 34;
+        let dx = clientX - cx;
+        let dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+        joyKnob.style.left = `${33 + dx}px`;
+        joyKnob.style.top = `${33 + dy}px`;
+        joyState.vx = dx / maxR;
+        joyState.vy = dy / maxR;
+      }
+
+      function resetJoystick() {
+        joyState.active = false;
+        joyState.id = null;
+        joyState.vx = 0;
+        joyState.vy = 0;
+        joyKnob.style.left = '33px';
+        joyKnob.style.top = '33px';
+      }
+
+      joyZone.addEventListener('pointerdown', e => { joyState.active = true; joyState.id = e.pointerId; updateJoystick(e.clientX, e.clientY); });
+      window.addEventListener('pointermove', e => { if (joyState.active && e.pointerId === joyState.id) updateJoystick(e.clientX, e.clientY); });
+      window.addEventListener('pointerup', e => { if (joyState.active && e.pointerId === joyState.id) resetJoystick(); });
+      window.addEventListener('pointercancel', e => { if (joyState.active && e.pointerId === joyState.id) resetJoystick(); });
+
+      const fireBtn = document.getElementById('btn-fire');
+      fireBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        state.firingManual = true;
+        fireBtn.classList.add('firing');
+        AudioEngine.init();
+        fireWeapon();
+      });
+      window.addEventListener('pointerup', () => { state.firingManual = false; fireBtn.classList.remove('firing'); });
+
+      document.getElementById('btn-switch-weap').addEventListener('click', () => {
+        if (state.unlockedWeapons.length <= 1) return;
+        const idx = state.unlockedWeapons.indexOf(state.currentWeaponId);
+        state.currentWeaponId = state.unlockedWeapons[(idx + 1) % state.unlockedWeapons.length];
+        state.weaponHeat = Math.min(state.weaponHeat, 55);
+        AudioEngine.playBuy();
+        updateHud();
+      });
+
+      const autoBtn = document.getElementById('btn-autofire');
+      autoBtn.addEventListener('click', () => {
+        state.autoFire = !state.autoFire;
+        autoBtn.textContent = state.autoFire ? '🎯 AUTO: BE' : '🎯 AUTO: KI';
+        autoBtn.classList.toggle('active', state.autoFire);
+      });
+
+      document.getElementById('btn-open-shop').addEventListener('click', openMenu);
+      document.getElementById('btn-back-game').addEventListener('click', closeMenu);
+      document.getElementById('btn-audio').addEventListener('click', () => AudioEngine.toggleMute());
+      document.getElementById('btn-diag').addEventListener('click', () => {
+        state.showDiag = !state.showDiag;
+        document.getElementById('diag-box').classList.toggle('show', state.showDiag);
+        updateHud();
+      });
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeTab = btn.dataset.tab;
+          renderModalTab();
+        });
+      });
+
+      document.getElementById('btn-start').addEventListener('click', resetGame);
+      document.getElementById('btn-restart').addEventListener('click', resetGame);
+
+      window.addEventListener('keydown', e => {
+        state.keys.add(e.code);
+        if (e.code === 'Escape' && menuModal.classList.contains('active')) closeMenu();
+        else if (e.code === 'KeyQ' && state.running && !state.paused) document.getElementById('btn-switch-weap').click();
+      });
+      window.addEventListener('keyup', e => { state.keys.delete(e.code); });
+      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 120));
+
+      let lastTs = performance.now();
+      let fpsAccum = 0;
+      let fpsFrames = 0;
+
+      function loop(now) {
+        const rawDt = (now - lastTs) / 1000;
+        lastTs = now;
+        const dt = Math.min(0.05, Math.max(0.001, rawDt));
+        state.dt = dt;
+        fpsAccum += rawDt;
+        fpsFrames++;
+        if (fpsAccum >= 0.5) {
+          state.fps = Math.round(fpsFrames / fpsAccum);
+          fpsAccum = 0;
+          fpsFrames = 0;
+        }
+        try { update(dt); render(); } catch (err) { console.error('Game loop error:', err); }
+        requestAnimationFrame(loop);
+      }
+
+      resizeCanvas();
+      updateHud();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
