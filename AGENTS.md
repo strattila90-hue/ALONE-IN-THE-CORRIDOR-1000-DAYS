@@ -29,7 +29,9 @@ The current version is the owner's **accepted baseline**. You may change it **on
 - **Autonomous machine-gun turret** (4 upgrade levels) in the Barricade & Systems tab
 - Armor tiers, barricade upgrades/repair, cooling, magnet upgrades, heat system
 - 10 enemy types + Leviathan boss, gibs/blood/slime effects, shaded wet-look monster sprites (finishSprite), corpses, glowing eyes, breathing/twitch, wounds
-- Exosuit-human hero sprite that changes per armor tier (4 looks)
+- Extra monsters: Nyurga (tall long-limbed human), Csigaszörny (snail), Kiborg-Bio (cyborg), Polip-Isten (Cthulhu-like octopus)
+- Animated noir 2D title-screen illustration (canvas #title-art) with soldier + monster line-up
+- Exosuit-human hero sprite (detailed, with backpack) that changes per armor tier (4 looks)
 - **Pause button (⏸ / P key)**, **Refresh/update button (⟳)** that clears caches and reloads, UI size − / + setting
 - Audio engine (Web Audio synth), mute button, diagnostics button
 - PWA: `manifest.json` (landscape, fullscreen), `sw.js`, `icon.svg`

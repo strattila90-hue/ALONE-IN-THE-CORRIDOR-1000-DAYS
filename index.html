@@ -841,6 +841,7 @@ html,body{overscroll-behavior:none}
 
     <div class="overlay-screen active" id="start-screen">
       <div class="hero-card">
+        <canvas id="title-art" width="480" height="220" style="display:block;margin:0 auto 8px;height:clamp(90px,30vh,230px);width:auto;max-width:100%;image-rendering:pixelated;border:3px solid #000;box-shadow:0 0 0 2px #5a4636,0 0 24px rgba(160,0,20,.45)"></canvas>
         <div style="font-size:10px; letter-spacing:0.18em; color:#ef4444; font-weight:800; margin-bottom:4px;">
           ISV HOLLOW MARY // ELHAGYOTT TEHERŰRHAJÓ // 3. RAKTÉR
         </div>
@@ -1067,6 +1068,10 @@ html,body{overscroll-behavior:none}
         wraith: { name: 'Arctalan Lidérc', hp: 92, speed: 96, dmg: 16, barDmg: 10, radius: 17, reward: 32, xp: 25, spitType: 'phase', color: '#a855f7', accent: '#e9d5ff' },
         bomber: { name: 'Légy-Ember Bomba', hp: 64, speed: 112, dmg: 28, barDmg: 48, radius: 17, reward: 24, xp: 20, spitType: null, color: '#eab308', accent: '#fef08a' },
         screamer: { name: 'Sikoltó Szájbarlang', hp: 110, speed: 62, dmg: 15, barDmg: 16, radius: 19, reward: 38, xp: 30, spitType: 'sonic', color: '#ec4899', accent: '#fbcfe8' },
+        lurker: { name: 'Nyurga', hp: 150, speed: 118, dmg: 20, barDmg: 24, radius: 18, reward: 36, xp: 28, spitType: null, color: '#b08a7a', accent: '#e6c9b8' },
+        snail: { name: 'Csigaszörny', hp: 250, speed: 30, dmg: 22, barDmg: 30, radius: 22, reward: 46, xp: 34, spitType: 'acid', color: '#6b8e23', accent: '#c3e06c' },
+        cyborg: { name: 'Kiborg-Bio', hp: 175, speed: 82, dmg: 24, barDmg: 26, radius: 18, reward: 48, xp: 34, spitType: 'phase', color: '#9a3b3b', accent: '#fca5a5' },
+        kraken: { name: 'Polip-Isten', hp: 330, speed: 38, dmg: 28, barDmg: 40, radius: 26, reward: 72, xp: 50, spitType: 'sonic', color: '#2e7d6e', accent: '#7fe3c2' },
         boss: { name: 'LEVIATHAN HORROR', hp: 1650, speed: 34, dmg: 32, barDmg: 45, radius: 44, reward: 260, xp: 180, spitType: 'boss', color: '#dc2626', accent: '#38bdf8', isBoss: true }
       };
 
@@ -1265,32 +1270,46 @@ html,body{overscroll-behavior:none}
         if (spriteCache.has(key)) return spriteCache.get(key);
         const t = Math.min(armorTier, 3);
         const PALS = [
-          { m: '#6b6f57', t: '#d9822b', p: '#3a3d30', g: '#7fe3c2' },
-          { m: '#56626c', t: '#e0a02f', p: '#2f373d', g: '#9ff0d6' },
-          { m: '#4a5a68', t: '#d9822b', p: '#262d33', g: '#7fd8ff' },
-          { m: '#4a3a40', t: '#c4222f', p: '#1c1618', g: '#ffb02e' }
+          { m: '#6b6f57', t: '#d9822b', p: '#3a3d30', g: '#7fe3c2', bag: '#5b4a2f', bag2: '#7a6440' },
+          { m: '#56626c', t: '#e0a02f', p: '#2f373d', g: '#9ff0d6', bag: '#4a5238', bag2: '#68724e' },
+          { m: '#4a5a68', t: '#d9822b', p: '#262d33', g: '#7fd8ff', bag: '#3a4a52', bag2: '#566a74' },
+          { m: '#4a3a40', t: '#c4222f', p: '#1c1618', g: '#ffb02e', bag: '#3a2a2e', bag2: '#5a4048' }
         ];
         const C = PALS[t], K = '#12040a', SK = '#c79a7a';
-        const small = document.createElement('canvas'); small.width = 20; small.height = 20;
+        const small = document.createElement('canvas'); small.width = 30; small.height = 30;
         const c = small.getContext('2d');
         const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
         const L = (x1, y1, x2, y2, th, col) => {
           const n = Math.max(1, Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)));
           for (const [tt, cc] of [[th + 2, K], [th, col]]) for (let i = 0; i <= n; i++) R(Math.round(x1 + (x2 - x1) * i / n - tt / 2), Math.round(y1 + (y2 - y1) * i / n - tt / 2), tt, tt, cc);
         };
-        const [bx, by, fx, fy] = [[8, 19, 12, 19], [6, 18, 14, 19], [10, 19, 11, 18]][walkFrame % 3];
-        L(9, 14, bx, by, 2, C.p); L(8, 9, 11, 11, 2, C.p);
-        R(4, 7, 4, 8, K); R(5, 8, 2, 6, C.p); R(5, 9, 2, 1, C.g); R(5, 11, 2, 1, C.g);
-        if (t >= 2) { R(3, 6, 2, 3, C.m); R(3, 14, 2, 2, C.m); }
-        R(7, 7, 7, 8, K); R(8, 8, 5, 6, C.m); R(9, 9, 3, 3, C.t); R(8, 13, 5, 1, C.p);
-        if (t === 3) R(10, 10, 2, 2, C.g);
-        L(12, 14, fx, fy, 2, C.m);
-        if (t >= 2) R(Math.round((12 + fx) / 2), 16, 1, 2, C.g);
-        if (t >= 1) { R(7, 6, 5, 3, K); R(8, 6, 4, 2, C.m); R(8, 6, 4, 1, C.t); }
-        R(8, 0, 7, 7, K); R(9, 1, 5, 5, C.m); R(11, 2, 4, 2, C.g); R(12, 4, 2, 1, SK); R(9, 6, 3, 1, K);
-        if (t === 3) { R(15, 1, 2, 2, '#fff7c0'); R(6, 5, 2, 2, C.t); }
-        L(11, 9, 15, 10, 2, C.m); R(15, 9, 2, 2, C.p);
-        const sprite = finishSprite(small, 3);
+        const [bx, by, fx, fy] = [[12, 28, 18, 28], [9, 27, 21, 28], [15, 28, 16, 27]][walkFrame % 3];
+        L(14, 21, bx, by, 3, C.p); L(13, 14, 17, 17, 3, C.p);
+        // backpack: bedroll, main bag, flap, pouches, bottle, antenna
+        R(4, 8, 9, 3, K); R(5, 9, 7, 1, '#8a7a56'); R(5, 10, 7, 1, '#5a4a32'); R(6, 8, 1, 3, K); R(10, 8, 1, 3, K);
+        R(3, 11, 8, 13, K); R(4, 12, 6, 11, C.bag); R(4, 12, 6, 3, C.bag2); R(6, 14, 2, 1, C.t); R(4, 18, 6, 1, K);
+        R(2, 16, 3, 6, K); R(3, 17, 1, 4, C.bag2); R(5, 24, 4, 4, K); R(6, 25, 2, 2, C.g);
+        R(4, 3, 1, 6, K); R(4, 2, 2, 1, C.g);
+        if (t >= 2) { R(5, 16, 4, 1, C.g); R(5, 20, 4, 1, C.g); }
+        L(10, 12, 13, 19, 1, C.p);
+        // torso, chest rig, ammo pouches, belt
+        R(10, 11, 11, 12, K); R(11, 12, 9, 10, C.m); R(13, 13, 5, 4, C.t); R(14, 14, 3, 1, K); R(12, 12, 1, 9, C.p); R(19, 12, 1, 7, C.p);
+        R(11, 19, 9, 1, C.p); R(15, 19, 2, 1, C.t); R(11, 20, 3, 3, K); R(12, 21, 1, 1, C.t); R(15, 20, 3, 3, K); R(16, 21, 1, 1, C.t);
+        if (t === 3) R(15, 15, 3, 3, C.g);
+        L(18, 21, fx, fy, 3, C.m);
+        const mx = Math.round((18 + fx) / 2), my = Math.round((21 + fy) / 2);
+        if (t >= 1) R(mx - 1, my - 1, 3, 3, C.t);
+        if (t >= 2) R(mx + 1, 24, 1, 3, C.g);
+        R(Math.min(bx, fx) - 3, 28, 4, 2, K); R(fx - 2, 28, 4, 2, K);
+        // pauldron, helmet, visor
+        R(10, 9, 8, 5, K); R(11, 9, 6, 4, C.m); R(11, 9, 6, 1, C.t); if (t >= 2) { R(9, 7, 3, 3, K); R(10, 7, 1, 2, C.t); }
+        R(14, 10, 5, 2, K); R(15, 10, 3, 1, C.p);
+        R(12, 0, 10, 10, K); R(13, 1, 8, 8, C.m); R(14, 1, 6, 1, C.t); R(17, 3, 5, 3, C.g); R(17, 3, 5, 1, '#d8fff4'); R(18, 6, 3, 2, SK); R(12, 4, 2, 3, C.p); R(13, 7, 5, 1, C.p);
+        if (t >= 1) R(21, 1, 3, 2, '#fff7c0');
+        if (t === 3) { R(10, 6, 2, 3, C.t); R(22, 7, 1, 2, C.t); }
+        // arms + glove
+        L(17, 14, 23, 16, 3, C.m); R(22, 14, 5, 5, K); R(23, 15, 3, 3, C.p);
+        const sprite = finishSprite(small, 2);
         spriteCache.set(key, sprite);
         return sprite;
       }
@@ -1300,8 +1319,8 @@ html,body{overscroll-behavior:none}
         if (spriteCache.has(key)) return spriteCache.get(key);
         const cfg = ENEMY_TYPES[typeKey] || ENEMY_TYPES.swarmer;
         const K = '#12040a', F = cfg.color, H = cfg.accent, B = '#eadfc2', P = '#e58fa0', Pd = '#a24a68', E = '#fff35c', S = '#8fd12b', M = '#6a0912', SK = '#c79a7a';
-        const a = frame % 2, GW = 22, GH = 24;
-        const sc = { boss: 7, brute: 4, carrier: 4, screamer: 4, larva: 3 }[typeKey] || 3;
+        const a = frame % 2, GW = { kraken: 28, snail: 26 }[typeKey] || 22, GH = { lurker: 36, cyborg: 26, snail: 18, kraken: 26 }[typeKey] || 24;
+        const sc = { boss: 7, brute: 4, carrier: 4, screamer: 4, kraken: 4, larva: 3 }[typeKey] || 3;
         const sp = document.createElement('canvas'); sp.width = GW; sp.height = GH;
         const c = sp.getContext('2d');
         const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
@@ -1349,6 +1368,30 @@ html,body{overscroll-behavior:none}
             R(x0 - 1, y, w2 + 2, 3, K); R(x0, y, w2, 2, F); R(x0 + 1, y, w2 - 2, 1, H);
           }
           R(7, 8, 8, 6, K); R(8, 9, 3, 4, B); R(11, 9, 3, 4, SK); R(8, 12, 6, 1, M); R(9, 10, 1, 1, E); R(12, 10, 2, 2, E); brain(11, 4, 4); R(2, 0, 1, 4, B); R(19, 0, 1, 4, B);
+        } else if (typeKey === 'lurker') {
+          L(10, 23, 7, 30, 2, F); L(7, 30, 9 - a * 2, 35, 1, F); L(13, 23, 15, 30, 2, F); L(15, 30, 13 + a * 2, 35, 1, F);
+          L(9, 14, 3, 24, 1, F); L(3, 24, 2, 33 + a, 1, F); claw(2, 33 + a); L(13, 14, 19, 24, 1, F); L(19, 24, 20, 33 + (1 - a), 1, F); claw(20, 33 + (1 - a));
+          L(11, 8, 11, 13, 2, F); ribs(11, 13, 4, 10); R(11, 22, 1, 2, B); face(11, 6);
+        } else if (typeKey === 'snail') {
+          R(0, 15, 26, 2, S);
+          R(9, 9, 16, 7, K); R(10, 10, 14, 5, F); R(10, 10, 14, 1, S);
+          R(21, 5, 5, 8, K); R(22, 6, 3, 6, F); R(22, 10, 3, 2, M); R(22, 10, 1, 1, B); R(24, 10, 1, 1, B);
+          L(22, 6, 21 + a, 1, 1, F); L(24, 6, 25, 1, 1, F); R(20 + a, 0, 2, 2, E); R(24, 0, 2, 2, E);
+          R(2, 0, 13, 12, K); R(3, 1, 11, 10, '#8a5a3a'); R(5, 3, 7, 6, '#6a3f26'); R(7, 5, 3, 3, '#c8a070'); R(4, 2, 6, 1, '#b88a60');
+          R(10, 3, 3, 3, B); R(10, 4, 1, 1, K); R(12, 4, 1, 1, K);
+        } else if (typeKey === 'kraken') {
+          for (let i = 0; i < 7; i++) {
+            const x0 = 9 + i * 1.7, x1 = 3 + i * 3.3 + ((i % 2) ? a * 2 : -a * 2);
+            L(x0, 11, x1, 25, 2, F); R(Math.round((x0 + x1) / 2), 18, 1, 1, P); R(Math.round((x0 + x1) / 2 + (x1 - x0) * 0.25), 21, 1, 1, P);
+          }
+          L(7, 5, 0, 1, 2, H); L(21, 5, 27, 1, 2, H);
+          R(7, 1, 14, 11, K); R(8, 2, 12, 9, F); R(9, 2, 10, 1, H); R(10, 6, 3, 2, E); R(15, 6, 3, 2, E); R(11, 6, 1, 2, K); R(16, 6, 1, 2, K); R(11, 10, 6, 2, M); R(13, 3, 2, 1, Pd);
+        } else if (typeKey === 'cyborg') {
+          L(10, 19, 8, 25, 2, '#8a8f94'); L(13, 19, 15 + a, 25, 2, F);
+          L(9, 12, 3, 19 + a, 2, F); claw(3, 19 + a);
+          ribs(11, 11, 6, 8); R(12, 12, 4, 6, '#6b7078'); R(13, 13, 2, 1, '#ff2a2a'); R(9, 12, 1, 6, '#c4222f');
+          R(14, 11, 7, 4, K); R(15, 12, 5, 2, '#6b7078'); R(20, 12, 2, 2, '#2a2d31');
+          face(11, 5); R(8, 2, 3, 7, '#8a8f94'); R(8, 4, 2, 1, '#ff2a2a'); R(10, 2, 1, 7, K);
         } else {
           L(9, 15, 8 - a * 2, 22, 2, F); L(13, 15, 14 + a * 2, 22, 2, F);
           L(8, 10, 3, 17 + a, 2, F); claw(3, 17 + a); L(14, 10, 19, 17 + (1 - a), 2, F); claw(19, 17 + (1 - a)); ribs(11, 9, 6, 7); skull(11, 5);
@@ -1445,7 +1488,7 @@ html,body{overscroll-behavior:none}
       }
 
       function addDecal(x, y, color = 'rgba(127, 29, 29, 0.42)', radius = 14) {
-        if (state.decals.length > 170) state.decals.shift();
+        if (state.decals.length > 260) state.decals.shift();
         state.decals.push({ x, y, color, radius, seed: Math.random() * 10 + 1 });
       }
 
@@ -1568,6 +1611,11 @@ html,body{overscroll-behavior:none}
         if (w >= 2) pool.push('brute', 'bomber');
         if (w >= 3) pool.push('stalker', 'carrier');
         if (w >= 4) pool.push('wraith', 'screamer');
+        if (w >= 2) pool.push('lurker');
+        if (w >= 3) pool.push('cyborg');
+        if (w >= 4) pool.push('snail');
+        if (w >= 5) pool.push('lurker');
+        if (w >= 6) pool.push('kraken');
         return pool[Math.floor(Math.random() * pool.length)];
       }
 
@@ -1717,8 +1765,8 @@ html,body{overscroll-behavior:none}
         AudioEngine.playHit(isCrit);
         addFloatingText(enemy.x, enemy.y - enemy.radius - 6, isCrit ? `${dmg}!` : `${dmg}`, isCrit ? '#fde047' : '#f8fafc');
         spawnParticles(enemy.x, enemy.y, 4, enemy.accent, 35, 140, 0.22, 2.5);
-        spawnParticles(enemy.x, enemy.y, 3, Math.random() < 0.5 ? '#a3121f' : '#6fa31a', 40, 170, 0.4, 4);
-        if (Math.random() < 0.18) spawnGibs(enemy, 1);
+        spawnParticles(enemy.x, enemy.y, 7, Math.random() < 0.6 ? '#a3121f' : '#6fa31a', 40, 190, 0.45, 4);
+        if (Math.random() < 0.3) spawnGibs(enemy, 1);
         if (enemy.hp <= 0) handleEnemyDeath(enemy);
       }
 
@@ -1735,10 +1783,12 @@ html,body{overscroll-behavior:none}
         state.score += enemy.xp * 10;
         // Stilizált, idegen nyálkaeffektus – nem naturális találati látvány.
         addDecal(enemy.x, enemy.y + enemy.radius * 0.65, Math.random() < 0.55 ? '#5a0e16' : '#4a7a12', Math.min(34, enemy.radius * 1.3));
-        spawnGibs(enemy, enemy.isBoss ? 28 : (enemy.radius >= 20 ? 13 : 7));
-        state.corpses.push({ sp: getEnemySprite(enemy.typeKey, enemy.animFrame), x: enemy.x, y: enemy.y, r: enemy.radius, life: 9 });
-        if (state.corpses.length > 14) state.corpses.shift();
-        spawnParticles(enemy.x, enemy.y, 10, '#a3121f', 60, 280, 0.5, 4);
+        spawnGibs(enemy, enemy.isBoss ? 44 : (enemy.radius >= 20 ? 20 : 11));
+        state.corpses.push({ sp: getEnemySprite(enemy.typeKey, enemy.animFrame), x: enemy.x, y: enemy.y, r: enemy.radius, life: 14 });
+        if (state.corpses.length > 22) state.corpses.shift();
+        spawnParticles(enemy.x, enemy.y, 26, '#a3121f', 60, 320, 0.6, 5);
+        spawnParticles(enemy.x, enemy.y, 10, '#5a0e16', 30, 200, 0.8, 6);
+        for (let q = 0; q < 3; q++) addDecal(enemy.x + (Math.random() - 0.5) * 50, enemy.y + enemy.radius * 0.6 + (Math.random() - 0.3) * 18, Math.random() < 0.7 ? '#5a0e16' : '#7a1018', 14 + Math.random() * 16);
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 42 : 16, enemy.accent || '#84cc16', 55, 260, 0.52, 4.5);
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 22 : 7, '#84cc16', 25, 130, 0.62, 5);
 
@@ -2160,7 +2210,7 @@ html,body{overscroll-behavior:none}
           state.gibs.push({ x: e.x, gy: Math.max(ft, Math.min(fb, e.y + e.radius * 0.4)), z: e.radius * 0.6 + Math.random() * 10, vz: 120 + Math.random() * 260,
             vx: Math.cos(a) * sp, vg: Math.sin(a) * sp * 0.25, s: 3 + Math.floor(Math.random() * (e.radius > 20 ? 7 : 4)), c: GIB_COLORS[Math.floor(Math.random() * 6)], landed: false, b: 0 });
         }
-        while (state.gibs.length > 90) state.gibs.shift();
+        while (state.gibs.length > 140) state.gibs.shift();
       }
 
       function updateParticlesAndTexts(dt) {
@@ -2493,6 +2543,7 @@ html,body{overscroll-behavior:none}
         for (const cp of state.corpses) {
           const ch = cp.sp.height * 0.24;
           ctx.globalAlpha = Math.min(0.85, cp.life / 3);
+          ctx.fillStyle = '#5a0e16'; ctx.fillRect(Math.round(cp.x - cp.sp.width * 0.62), Math.round(cp.y + cp.r - ch * 0.4), Math.round(cp.sp.width * 1.24), Math.round(ch * 0.9));
           ctx.drawImage(cp.sp, Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
           ctx.fillStyle = 'rgba(60,0,10,.55)'; ctx.fillRect(Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
         }
@@ -3087,6 +3138,80 @@ html,body{overscroll-behavior:none}
           }
         } catch (_) {}
       });
+      const titleCv = document.getElementById('title-art');
+      const tg = titleCv.getContext('2d');
+      tg.imageSmoothingEnabled = false;
+      const tintCache = new Map();
+      function tinted(sp, key, a) {
+        const k = key + a;
+        if (tintCache.has(k)) return tintCache.get(k);
+        const cv = document.createElement('canvas'); cv.width = sp.width; cv.height = sp.height;
+        const x = cv.getContext('2d'); x.drawImage(sp, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(14,0,8,' + a + ')'; x.fillRect(0, 0, cv.width, cv.height);
+        tintCache.set(k, cv);
+        return cv;
+      }
+      function drawTitleArt(t) {
+        const W = 480, H = 220, g = tg;
+        let gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#090305'); gr.addColorStop(0.6, '#1a090c'); gr.addColorStop(1, '#0b0506');
+        g.fillStyle = gr; g.fillRect(0, 0, W, H);
+        const poly = (pts, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); g.fill(); };
+        poly([150, 40, 330, 40, 330, 160, 150, 160], '#12090b');
+        poly([0, 0, 150, 40, 150, 160, 0, 220], '#0f0709'); poly([480, 0, 330, 40, 330, 160, 480, 220], '#0f0709');
+        poly([0, 0, 480, 0, 330, 40, 150, 40], '#080304'); poly([0, 220, 150, 160, 330, 160, 480, 220], '#150b0d');
+        g.fillStyle = '#05020a'; g.fillRect(212, 72, 56, 88);
+        g.strokeStyle = '#2a1a16'; g.lineWidth = 2;
+        for (const x of [150, 118, 88, 60, 36, 16]) {
+          const top = 40 * x / 150, bot = 160 + 60 * (1 - x / 150);
+          g.beginPath(); g.moveTo(x, top); g.lineTo(x, bot); g.moveTo(480 - x, top); g.lineTo(480 - x, bot); g.stroke();
+        }
+        g.strokeStyle = '#1f1112';
+        for (const y of [170, 182, 196, 212]) { g.beginPath(); g.moveTo(0, y); g.lineTo(480, y); g.stroke(); }
+        const flick = 0.35 + 0.12 * Math.sin(t * 9) + (Math.sin(t * 41) > 0.92 ? -0.2 : 0);
+        let rg = g.createRadialGradient(240, 118, 4, 240, 118, 90); rg.addColorStop(0, 'rgba(210,30,40,' + flick + ')'); rg.addColorStop(1, 'rgba(210,30,40,0)');
+        g.fillStyle = rg; g.fillRect(120, 30, 240, 190);
+        rg = g.createRadialGradient(60, 6, 4, 60, 6, 150); rg.addColorStop(0, 'rgba(230,40,50,' + (0.45 + flick * 0.4) + ')'); rg.addColorStop(1, 'rgba(230,40,50,0)');
+        g.fillStyle = rg; g.fillRect(0, 0, 240, 170);
+        g.fillStyle = '#e0303e'; g.fillRect(54, 0, 12, 4);
+        const mons = [['wraith', 335, 172, 1], ['stalker', 245, 176, 1], ['kraken', 395, 192, 1], ['lurker', 285, 199, 1.333], ['snail', 435, 205, 1.333], ['cyborg', 190, 206, 1.333]];
+        mons.forEach((m, i) => {
+          const sp = getEnemySprite(m[0], Math.floor(t * 1.6 + i) % 2), tt = tinted(sp, m[0] + (Math.floor(t * 1.6 + i) % 2), 0.55);
+          const w = tt.width * m[3], h = tt.height * m[3], bob = Math.sin(t * 2 + i) * 1.5;
+          g.fillStyle = 'rgba(70,8,16,.7)'; g.fillRect(m[1] - w * 0.45, m[2] - 3, w * 0.9, 5);
+          g.drawImage(tt, Math.round(m[1] - w / 2), Math.round(m[2] - h + bob), w, h);
+          g.globalAlpha = 0.45 + 0.3 * Math.sin(t * 6 + i * 2); g.fillStyle = '#ff2a2a'; g.fillRect(m[1] - 6, m[2] - h * 0.78 + bob, 12, 3); g.globalAlpha = 1;
+        });
+        g.fillStyle = 'rgba(190,110,110,.06)';
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 6; j++) g.fillRect(((j * 97 + t * 14 * (1 + i)) % (W + 120)) - 120, 120 + i * 22, 120, 12);
+        const hero = getHeroSprite(3, 0), sx = 4, sy = Math.round(206 - hero.height * 2 + Math.sin(t * 2) * 1);
+        g.drawImage(hero, sx, sy, hero.width * 2, hero.height * 2);
+        g.fillStyle = '#12040a'; g.fillRect(sx + 88, sy + 52, 62, 14); g.fillStyle = '#5a5f66'; g.fillRect(sx + 90, sy + 54, 58, 7); g.fillStyle = '#8a8f94'; g.fillRect(sx + 128, sy + 55, 28, 4); g.fillStyle = '#c4222f'; g.fillRect(sx + 96, sy + 61, 8, 4);
+        if (Math.sin(t * 23) > 0.9) {
+          g.fillStyle = 'rgba(255,210,120,.28)'; poly([sx + 156, sy + 56, 330, sy + 20, 330, sy + 96], 'rgba(255,210,120,.2)');
+          g.fillStyle = '#fff2b0'; g.fillRect(sx + 156, sy + 50, 14, 12); g.fillStyle = '#ffb02e'; g.fillRect(sx + 170, sy + 54, 10, 4);
+        }
+        for (let i = 0; i < 46; i++) {
+          const r1 = ((i * 9301 + 49297) % 233280) / 233280, r2 = ((i * 4973 + 7919) % 233280) / 233280;
+          g.fillStyle = i % 3 ? '#5a0e16' : '#7a1018';
+          if (i < 30) g.fillRect(r1 * W, 168 + r2 * 46, 3 + (i % 5) * 2, 2 + (i % 3)); else g.fillRect(r1 * W, 6 + r2 * 120, 2 + i % 3, 6 + (i % 7) * 3);
+        }
+        for (let i = 0; i < 9; i++) {
+          const x = (i * 53 + 17) % W, len = (t * 30 + i * 40) % 90;
+          g.fillStyle = '#8a1220'; g.fillRect(x, 0, 2, len); g.fillRect(x - 1, len, 4, 3);
+        }
+        const vg = g.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, 290); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.88)');
+        g.fillStyle = vg; g.fillRect(0, 0, W, H);
+        g.fillStyle = '#000'; g.fillRect(0, 0, W, 8); g.fillRect(0, H - 8, W, 8);
+        g.fillStyle = 'rgba(255,255,255,.07)';
+        for (let i = 0; i < 70; i++) g.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+      }
+      let titleLast = 0;
+      function titleLoop(now) {
+        requestAnimationFrame(titleLoop);
+        if (document.hidden || !document.getElementById('start-screen').classList.contains('active') || now - titleLast < 60) return;
+        titleLast = now;
+        drawTitleArt(now / 1000);
+      }
+      requestAnimationFrame(titleLoop);
       applyUi();
       document.getElementById('btn-start').addEventListener('click', resetGame);
       document.getElementById('btn-restart').addEventListener('click', resetGame);
