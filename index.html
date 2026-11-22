@@ -1242,29 +1242,94 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       }
 
       function getEnemySprite(typeKey, frame) {
-        const key = `enemy_${typeKey}_${frame}`;
+        const key = `enemy_detail_${typeKey}_${frame}`;
         if (spriteCache.has(key)) return spriteCache.get(key);
         const cfg = ENEMY_TYPES[typeKey] || ENEMY_TYPES.swarmer;
-        const pal = { o: '#12040a', f: cfg.color, h: cfg.accent, e: typeKey === 'wraith' ? '#7ff' : '#fff35c', t: '#eadfc2', s: '#8fd12b', b: '#3a0a14', r: '#d02a3a' };
-        const alt = frame % 2 === 1;
-        const M = [
-          '.....oooooo.....', '...ooffhhffoo...', '..offffffffffo..', '.offeffffffeffo.', '.ofsfffttfffsfo.',
-          '..otttttttttto..', '..ofbbbrrbbbfo..', '.offbrbbbbrbffo.', '.ofo.obbbbbo.ofo', '.oo..ofbbfo..oo.',
-          alt ? '....ofo....ofo..' : '.....ofo..ofo...',
-          alt ? '...offo....offo.' : '....offo..offo..',
-          alt ? '...ooo......ooo.' : '....ooo....ooo..'
-        ];
-        const scale = { boss: 8, brute: 5, carrier: 4, screamer: 4, larva: 2 }[typeKey] || 3;
-        const sp = buildPixelSprite(M, pal, scale);
+        const sp = document.createElement('canvas');
+        sp.width = 128;
+        sp.height = 128;
         const c = sp.getContext('2d');
-        const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x * scale, y * scale, w * scale, h * scale); };
-        if (typeKey === 'spitter') { R(6, 5, 1, 3, '#8fd12b'); R(9, 6, 1, 2, '#8fd12b'); }
-        if (typeKey === 'brute') { R(2, 2, 1, 2, '#eadfc2'); R(13, 2, 1, 2, '#eadfc2'); R(0, 4, 1, 2, '#eadfc2'); R(15, 4, 1, 2, '#eadfc2'); }
-        if (typeKey === 'stalker') { R(4, 0, 1, 1, '#eadfc2'); R(11, 0, 1, 1, '#eadfc2'); }
-        if (typeKey === 'carrier') { R(1, 6, 2, 2, '#e58fa0'); R(13, 6, 2, 2, '#e58fa0'); R(0, 8, 2, 2, '#d02a3a'); }
-        if (typeKey === 'bomber') R(6, 6, 4, 2, '#ffe14a');
-        if (typeKey === 'screamer') { R(5, 5, 6, 2, '#000'); R(6, 5, 1, 1, '#eadfc2'); R(9, 5, 1, 1, '#eadfc2'); }
-        if (typeKey === 'boss') { R(2, 0, 1, 3, '#eadfc2'); R(13, 0, 1, 3, '#eadfc2'); R(5, 2, 1, 1, '#fff35c'); R(10, 2, 1, 1, '#fff35c'); R(0, 9, 1, 4, '#8fd12b'); R(15, 9, 1, 4, '#8fd12b'); R(4, 4, 1, 1, '#d02a3a'); R(11, 4, 1, 1, '#d02a3a'); }
+        const cx = 64, cy = 65;
+        const pulse = frame % 2 ? 1.035 : 0.97;
+        const body = c.createRadialGradient(48, 42, 5, 64, 66, 62);
+        body.addColorStop(0, cfg.accent);
+        body.addColorStop(0.28, cfg.color);
+        body.addColorStop(0.76, '#17151d');
+        body.addColorStop(1, '#05060a');
+        c.save();
+        c.translate(cx, cy);
+        c.scale(pulse, 1 / pulse);
+        c.shadowColor = cfg.color;
+        c.shadowBlur = typeKey === 'boss' ? 22 : 10;
+        c.fillStyle = body;
+        c.beginPath();
+        c.ellipse(0, 2, typeKey === 'boss' ? 48 : 34, typeKey === 'boss' ? 53 : 42, 0, 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+        // Organic armor plates and ridges
+        for (let j = 0; j < 5; j++) {
+          const yy = -27 + j * 13;
+          c.strokeStyle = j % 2 ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.48)';
+          c.lineWidth = j % 2 ? 2 : 5;
+          c.beginPath();
+          c.moveTo(-25 + Math.sin(j) * 4, yy);
+          c.quadraticCurveTo(0, yy - 8, 25 - Math.cos(j) * 4, yy + 2);
+          c.stroke();
+        }
+        // Side limbs / tendrils
+        c.strokeStyle = '#090a0e';
+        c.lineWidth = typeKey === 'boss' ? 11 : 7;
+        c.lineCap = 'round';
+        for (const side of [-1, 1]) {
+          c.beginPath();
+          c.moveTo(side * 23, 10);
+          c.quadraticCurveTo(side * 49, 18, side * 43, 43 + (frame ? 3 : 0));
+          c.stroke();
+          c.strokeStyle = cfg.color;
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(side * 24, 11);
+          c.quadraticCurveTo(side * 43, 20, side * 40, 37);
+          c.stroke();
+          c.strokeStyle = '#090a0e';
+          c.lineWidth = typeKey === 'boss' ? 11 : 7;
+        }
+        // Face cavity and luminous eyes
+        c.fillStyle = 'rgba(0,0,0,.82)';
+        c.beginPath();
+        c.ellipse(0, -9, 22, 18, 0, 0, Math.PI * 2);
+        c.fill();
+        const eyeGlow = c.createRadialGradient(0, -13, 1, 0, -13, 19);
+        eyeGlow.addColorStop(0, '#fff');
+        eyeGlow.addColorStop(0.15, cfg.accent);
+        eyeGlow.addColorStop(0.5, cfg.color);
+        eyeGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = eyeGlow;
+        c.beginPath();
+        c.ellipse(-10, -13, 7, 5, -0.2, 0, Math.PI * 2);
+        c.ellipse(10, -13, 7, 5, 0.2, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = '#050509';
+        c.beginPath();
+        c.ellipse(-10, -13, 2, 4, 0, 0, Math.PI * 2);
+        c.ellipse(10, -13, 2, 4, 0, 0, Math.PI * 2);
+        c.fill();
+        // Surface speckles and rim lighting
+        for (let k = 0; k < 28; k++) {
+          const ang = k * 2.399;
+          const rr = 15 + (k % 7) * 3.5;
+          c.fillStyle = k % 3 ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.28)';
+          c.beginPath();
+          c.arc(Math.cos(ang) * rr, Math.sin(ang) * rr + 2, 1 + (k % 3), 0, Math.PI * 2);
+          c.fill();
+        }
+        c.restore();
+        // Soft atmospheric halo
+        const halo = c.createRadialGradient(cx, cy, 34, cx, cy, 63);
+        halo.addColorStop(0, 'rgba(0,0,0,0)');
+        halo.addColorStop(1, cfg.color + '00');
+        c.fillStyle = halo;
+        c.fillRect(0, 0, 128, 128);
         spriteCache.set(key, sp);
         return sp;
       }
@@ -1400,7 +1465,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         state.devourTimer = 0;
         state.wave = 1;
         state.waveKills = 0;
-        state.waveTargetKills = 10;
+        state.waveTargetKills = 30;
         state.spawnTimer = 0.5;
         state.bossSpawnedForWave = 0;
         state.coins = 45;
@@ -1451,7 +1516,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       function startWave(nextWave) {
         state.wave = nextWave;
         state.waveKills = 0;
-        state.waveTargetKills = 9 + nextWave * 4;
+        state.waveTargetKills = (9 + nextWave * 4) * 3;
         state.spawnTimer = 0.4;
         if (state.barricadeHp > 0) {
           state.barricadeHp = Math.min(state.barricadeMaxHp, state.barricadeHp + Math.round(state.barricadeMaxHp * 0.15));
@@ -1834,9 +1899,9 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         if (state.autoFire || state.firingManual || state.keys.has('Space')) fireWeapon();
 
         state.spawnTimer -= dt;
-        if (state.spawnTimer <= 0 && state.enemies.length < 7 + state.wave * 2) {
+        if (state.spawnTimer <= 0 && state.enemies.length < 21 + state.wave * 6) {
           spawnEnemy();
-          state.spawnTimer = Math.max(0.55, 1.85 - state.wave * 0.11);
+          state.spawnTimer = Math.max(0.22, 0.62 - state.wave * 0.037);
         }
 
         for (let i = state.projectiles.length - 1; i >= 0; i--) {
@@ -2537,7 +2602,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         ctx.ellipse(enemy.x, enemy.y + enemy.radius + 4, enemy.radius * 0.85, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.drawImage(sprite, Math.round(enemy.x - sprite.width * 0.5), Math.round(enemy.y - sprite.height * 0.55));
+        ctx.drawImage(sprite, Math.round(enemy.x - enemy.radius * 1.65), Math.round(enemy.y - enemy.radius * 1.65), Math.round(enemy.radius * 3.3), Math.round(enemy.radius * 3.3));
         if (enemy.hitFlash > 0) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
           ctx.beginPath();
