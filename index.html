@@ -1366,6 +1366,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         kills: 0,
         score: 0,
         unlockedWeapons: ['pipe_shotgun'],
+        weaponLevels: {},
         currentWeaponId: 'pipe_shotgun',
         weaponHeat: 0,
         fireCooldown: 0,
@@ -1401,7 +1402,29 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         rainDrops: []
       };
 
-      function getCurrentWeapon() { return WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0]; }
+      const MAX_WEAPON_LEVEL = 5;
+      function getWeaponLevel(id) { return Math.max(0, Math.min(MAX_WEAPON_LEVEL, Number(state.weaponLevels?.[id] || 0))); }
+      function getWeaponUpgradeCost(w) {
+        const level = getWeaponLevel(w.id);
+        return Math.round(70 + w.tier * 38 + level * level * 95);
+      }
+      function getWeaponStats(w) {
+        const level = getWeaponLevel(w.id);
+        return {
+          ...w,
+          level,
+          damage: Math.round(w.damage * (1 + level * 0.18)),
+          fireRate: Math.max(0.035, w.fireRate * Math.pow(0.95, level)),
+          heatPerShot: Math.max(0.8, w.heatPerShot * Math.pow(0.92, level)),
+          speed: w.speed * (1 + level * 0.035),
+          splash: w.splash > 0 ? w.splash * (1 + level * 0.12) : 0,
+          pierce: w.pierce >= 99 ? 99 : w.pierce + (level >= 3 ? 1 : 0) + (level >= 5 ? 1 : 0)
+        };
+      }
+      function getCurrentWeapon() {
+        const base = WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0];
+        return getWeaponStats(base);
+      }
       function getArmorConfig() { return ARMOR_TIERS[Math.min(state.armorTier, ARMOR_TIERS.length - 1)]; }
       function getBarricadeX() { return Math.max(195, Math.min(state.width * 0.27, 330)); }
 
@@ -1473,6 +1496,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         state.kills = 0;
         state.score = 0;
         state.unlockedWeapons = ['pipe_shotgun'];
+        state.weaponLevels = {};
         state.currentWeaponId = 'pipe_shotgun';
         state.weaponHeat = 0;
         state.fireCooldown = 0;
@@ -2622,6 +2646,7 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
       function hasAffordableUpgrade() {
         for (const w of WEAPONS) {
           if (!state.unlockedWeapons.includes(w.id) && state.coins >= w.cost) return true;
+          if (state.unlockedWeapons.includes(w.id) && getWeaponLevel(w.id) < MAX_WEAPON_LEVEL && state.coins >= getWeaponUpgradeCost(w)) return true;
         }
         const nextArmor = ARMOR_TIERS[state.armorTier + 1];
         if (nextArmor && state.coins >= nextArmor.cost) return true;
@@ -2678,23 +2703,28 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
         document.getElementById('modal-coins').textContent = `${state.coins} Cr`;
 
         if (activeTab === 'weapons') {
-          for (const w of WEAPONS) {
+          for (const base of WEAPONS) {
+            const w = getWeaponStats(base);
             const owned = state.unlockedWeapons.includes(w.id);
             const equipped = state.currentWeaponId === w.id;
+            const level = getWeaponLevel(w.id);
+            const upgradeCost = getWeaponUpgradeCost(base);
             const card = document.createElement('div');
-            card.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
-            card.innerHTML = `
+            card.className = \`shop-item \${owned ? 'owned' : ''} \${equipped ? 'equipped' : ''}\`;
+            card.innerHTML = \`
               <div>
-                <div class="item-name">MK.${w.tier} // ${w.name}</div>
-                <div class="item-desc">${w.desc}</div>
-                <div class="item-stats">Sebzés: ${w.damage} • Tűzgyorsaság: ${(1 / w.fireRate).toFixed(1)}/s</div>
+                <div class="item-name">MK.\${w.tier} // \${w.name} \${owned ? \`<span style="color:#67e8f9">[LV.\${level}/\${MAX_WEAPON_LEVEL}]</span>\` : ''}</div>
+                <div class="item-desc">\${w.desc}</div>
+                <div class="item-stats">Sebzés: \${w.damage} • Tűzgyorsaság: \${(1 / w.fireRate).toFixed(1)}/s • Hőtermelés: \${w.heatPerShot.toFixed(1)} • Áthatolás: \${w.pierce >= 99 ? '∞' : w.pierce}</div>
+                \${owned ? \`<div class="item-stats" style="color:#a5f3fc">Fejlesztés: +\${level * 18}% sebzés • +\${Math.round((1 - Math.pow(0.95, level)) * 100)}% tűzgyorsaság • -\${Math.round((1 - Math.pow(0.92, level)) * 100)}% hő</div>\` : ''}
               </div>
               <div class="item-actions"></div>
-            `;
+            \`;
+            const actions = card.querySelector('.item-actions');
             const btn = document.createElement('button');
             btn.type = 'button';
             if (owned) {
-              btn.className = `buy-btn ${equipped ? 'selected' : 'equip'}`;
+              btn.className = \`buy-btn \${equipped ? 'selected' : 'equip'}\`;
               btn.textContent = equipped ? 'AKTÍV FEGYVER' : 'KIVÁLASZTÁS';
               btn.disabled = equipped;
               btn.addEventListener('click', () => {
@@ -2704,9 +2734,25 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
                 updateHud();
                 renderModalTab();
               });
+              actions.appendChild(btn);
+
+              const upgradeBtn = document.createElement('button');
+              upgradeBtn.type = 'button';
+              upgradeBtn.className = 'buy-btn';
+              upgradeBtn.textContent = level >= MAX_WEAPON_LEVEL ? 'MAX FEJLESZTÉS' : \`FEJLESZTÉS +1 (\${upgradeCost} Cr)\`;
+              upgradeBtn.disabled = level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost;
+              upgradeBtn.addEventListener('click', () => {
+                if (level >= MAX_WEAPON_LEVEL || state.coins < upgradeCost) return;
+                state.coins -= upgradeCost;
+                state.weaponLevels[w.id] = level + 1;
+                AudioEngine.playBuy();
+                updateHud();
+                renderModalTab();
+              });
+              actions.appendChild(upgradeBtn);
             } else {
               btn.className = 'buy-btn';
-              btn.textContent = `MEGVÁSÁRLÁS (${w.cost} Cr)`;
+              btn.textContent = \`MEGVÁSÁRLÁS (\${w.cost} Cr)\`;
               btn.disabled = state.coins < w.cost;
               btn.addEventListener('click', () => {
                 if (state.coins < w.cost) return;
@@ -2718,8 +2764,8 @@ background:linear-gradient(#7a1018,#7a1018) 0 0/100% 12px no-repeat,linear-gradi
                 updateHud();
                 renderModalTab();
               });
+              actions.appendChild(btn);
             }
-            card.querySelector('.item-actions').appendChild(btn);
             container.appendChild(card);
           }
         } else if (activeTab === 'armor') {
