@@ -600,6 +600,67 @@
       #joy-knob { width: 38px; height: 38px; left: 29px; top: 29px; }
       #btn-fire { width: 72px; height: 72px; }
     }
+
+    /* Cross-device layout: desktop gets a clean HUD; touch devices keep large controls. */
+    canvas#gameCanvas { image-rendering: auto; }
+    #desktop-hint {
+      position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+      z-index:9; padding:7px 12px; border:1px solid rgba(71,85,105,.65);
+      background:rgba(3,7,14,.72); color:#cbd5e1; font-size:10px;
+      letter-spacing:.04em; white-space:nowrap; pointer-events:none;
+      backdrop-filter:blur(5px); border-radius:3px;
+    }
+    #desktop-hint span { color:#38bdf8; padding:0 4px; }
+    @media (hover:hover) and (pointer:fine) and (min-width:900px) {
+      #touch-controls { display:none; }
+      #desktop-hint { display:block; }
+      .hud-panel { padding:7px 11px; min-width:86px; }
+      .hud-label { font-size:10px; }
+      .hud-value { font-size:14px; }
+      .bar-track { width:126px; }
+      .tactile-btn { cursor:pointer; }
+    }
+    @media (hover:none), (pointer:coarse), (max-width:899px) {
+      #desktop-hint { display:none; }
+      #touch-controls { display:block; }
+    }
+    @media (max-width:760px) {
+      #hud-top { left:5px; right:5px; top:max(5px,env(safe-area-inset-top)); gap:4px; }
+      .hud-group { gap:4px; }
+      .hud-panel { min-width:58px; padding:4px 6px; }
+      .hud-label { font-size:7px; letter-spacing:.03em; }
+      .hud-value { font-size:10px; }
+      .bar-track { width:68px; height:6px; }
+      .tactile-btn { padding:7px 8px; min-height:34px; font-size:9px; }
+      #boss-hud { top:66px; width:min(62vw,420px); }
+      #wave-banner { font-size:clamp(13px,3vw,20px); }
+      #joy-base { width:100px; height:100px; }
+      #joy-knob { left:29px; top:29px; width:42px; height:42px; }
+      #btn-fire { width:76px; height:76px; }
+      .pad-btn { font-size:9px; padding:8px 9px; }
+    }
+    @media (max-width:520px) {
+      #hud-top { align-items:flex-start; }
+      #hud-top > .hud-group:first-child { max-width:68%; }
+      #hud-top > .hud-group:last-child { max-width:32%; justify-content:flex-end; }
+      #hud-top > .hud-group:last-child .hud-panel { min-width:48px; }
+      #hud-top > .hud-group:last-child .hud-panel:nth-child(2) { display:none; }
+      #btn-open-shop { font-size:0; width:34px; min-width:34px; padding:5px; }
+      #btn-open-shop::before { content:'☰'; font-size:17px; }
+      #btn-audio, #btn-diag { min-width:32px; padding:5px; }
+      #boss-hud { top:74px; }
+      #joy-zone { width:43%; height:54%; }
+      #right-action-pad { right:9px; bottom:max(10px,env(safe-area-inset-bottom)); gap:6px; }
+      #joy-base { left:max(12px,env(safe-area-inset-left)); bottom:max(12px,env(safe-area-inset-bottom)); }
+    }
+    @media (max-height:500px) and (orientation:landscape) {
+      #hud-top { transform:scale(.88); transform-origin:top left; right:12%; }
+      #boss-hud { top:54px; }
+      #joy-base { width:86px; height:86px; }
+      #joy-knob { left:24px; top:24px; width:38px; height:38px; }
+      #btn-fire { width:66px; height:66px; }
+      .pad-btn { padding:6px 8px; }
+    }
   </style>
 </head>
 <body>
@@ -607,6 +668,7 @@
     <canvas id="gameCanvas"></canvas>
     <div class="noir-scanlines"></div>
     <div class="noir-vignette"></div>
+    <div id="desktop-hint">MOZGÁS: WASD / NYILAK <span>•</span> TÜZELÉS: SPACE / EGÉRKATTINTÁS <span>•</span> FEGYVER: Q <span>•</span> AUTO: E <span>•</span> MENÜ: ESC</div>
 
     <div id="hud-top">
       <div class="hud-group">
@@ -639,6 +701,10 @@
         <div class="hud-panel">
           <div class="hud-label">HULLÁM</div>
           <div class="hud-value" id="hud-wave-txt" style="color:#fbbf24;">W1</div>
+        </div>
+        <div class="hud-panel difficulty-panel" id="difficulty-panel">
+          <div class="hud-label">VESZÉLYSZINT</div>
+          <div class="hud-value" id="hud-difficulty-txt" style="color:#fbbf24;">ALACSONY</div>
         </div>
 
         <div class="hud-panel">
@@ -1929,64 +1995,163 @@
           ctx.translate((Math.random() * 2 - 1) * state.shakeIntensity, (Math.random() * 2 - 1) * state.shakeIntensity);
         }
 
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, floorTop);
-        skyGrad.addColorStop(0, '#04060b');
-        skyGrad.addColorStop(0.55, '#0b1220');
-        skyGrad.addColorStop(1, '#111827');
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, w, floorTop);
+        // SECTOR-09: cinematic cargo-ship corridor and planetary viewport.
+        const spaceGrad = ctx.createLinearGradient(0, 0, 0, floorTop + 30);
+        spaceGrad.addColorStop(0, '#02040a');
+        spaceGrad.addColorStop(0.62, '#101a2a');
+        spaceGrad.addColorStop(1, '#263044');
+        ctx.fillStyle = spaceGrad;
+        ctx.fillRect(0, 0, w, h);
 
-        for (let i = 0; i < 38; i++) {
-          const sx = ((i * 197 + Math.floor(state.time * 4)) % w);
-          const sy = ((i * 73) % Math.max(40, floorTop - 16));
-          ctx.fillStyle = i % 5 === 0 ? 'rgba(125, 211, 252, 0.7)' : 'rgba(226, 232, 240, 0.35)';
-          ctx.fillRect(sx, sy, 2, 2);
+        // Deep-space stars and a slow-moving debris field.
+        for (let i = 0; i < 72; i++) {
+          const sx = (i * 197.3 + state.time * (5 + (i % 4) * 3)) % w;
+          const sy = (i * 71.7) % Math.max(80, h * 0.62);
+          ctx.fillStyle = i % 7 === 0 ? 'rgba(125,211,252,.9)' : 'rgba(226,232,240,.42)';
+          ctx.fillRect(sx, sy, i % 9 === 0 ? 2.5 : 1.4, i % 9 === 0 ? 2.5 : 1.4);
         }
 
-        const wreckX = Math.floor(w * 0.66);
-        const wreckY = Math.floor(floorTop * 0.52);
-        ctx.fillStyle = '#090d16';
+        // Planet visible through the reinforced observation window.
+        const winX = Math.floor(w * 0.61), winY = Math.floor(h * 0.105);
+        const winW = Math.floor(w * 0.34), winH = Math.floor(h * 0.31);
+        ctx.save();
+        ctx.shadowColor = 'rgba(56,189,248,.38)';
+        ctx.shadowBlur = 22;
+        ctx.fillStyle = '#07101c';
+        ctx.fillRect(winX - 8, winY - 8, winW + 16, winH + 16);
+        ctx.shadowBlur = 0;
         ctx.beginPath();
-        ctx.moveTo(wreckX - 70, wreckY + 8);
-        ctx.lineTo(wreckX + 20, wreckY - 18);
-        ctx.lineTo(wreckX + 68, wreckY + 4);
-        ctx.lineTo(wreckX + 35, wreckY + 22);
-        ctx.lineTo(wreckX - 55, wreckY + 24);
+        ctx.rect(winX, winY, winW, winH);
+        ctx.clip();
+        const nebula = ctx.createLinearGradient(winX, winY, winX + winW, winY + winH);
+        nebula.addColorStop(0, '#101b38');
+        nebula.addColorStop(.52, '#29305a');
+        nebula.addColorStop(1, '#071421');
+        ctx.fillStyle = nebula;
+        ctx.fillRect(winX, winY, winW, winH);
+        const planetX = winX + winW * .58, planetY = winY + winH * .58;
+        const planetR = Math.min(winH * .58, winW * .31);
+        const planetGlow = ctx.createRadialGradient(planetX, planetY, planetR * .55, planetX, planetY, planetR * 1.55);
+        planetGlow.addColorStop(0, 'rgba(56,189,248,.28)');
+        planetGlow.addColorStop(1, 'rgba(56,189,248,0)');
+        ctx.fillStyle = planetGlow;
+        ctx.fillRect(winX, winY, winW, winH);
+        const planet = ctx.createRadialGradient(planetX - planetR * .38, planetY - planetR * .38, planetR * .08, planetX, planetY, planetR);
+        planet.addColorStop(0, '#b7a6a2');
+        planet.addColorStop(.42, '#665d78');
+        planet.addColorStop(.78, '#35415d');
+        planet.addColorStop(1, '#111b32');
+        ctx.fillStyle = planet;
+        ctx.beginPath();
+        ctx.arc(planetX, planetY, planetR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(186,230,253,.32)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(planetX, planetY + planetR * .12, planetR * 1.12, planetR * .28, -.12, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.stroke();
+        // Distant cargo craft crossing the planet.
+        const shipTravel = (state.time * 22) % (winW + 90);
+        ctx.fillStyle = 'rgba(5,10,20,.9)';
+        ctx.beginPath();
+        ctx.moveTo(winX + shipTravel - 70, winY + winH * .3);
+        ctx.lineTo(winX + shipTravel - 36, winY + winH * .24);
+        ctx.lineTo(winX + shipTravel - 10, winY + winH * .31);
+        ctx.lineTo(winX + shipTravel - 38, winY + winH * .36);
         ctx.closePath();
         ctx.fill();
-        const glowPulse = 0.45 + 0.35 * Math.sin(state.time * 7);
-        ctx.fillStyle = `rgba(239, 68, 68, ${glowPulse})`;
-        ctx.fillRect(wreckX - 18, wreckY - 4, 8, 5);
-        ctx.fillRect(wreckX + 16, wreckY + 4, 6, 4);
+        ctx.restore();
 
-        const beaconAlpha = 0.05 + 0.05 * Math.sin(state.time * 5.5);
+        // Reinforced window frame, bolts and warning lamps.
+        ctx.save();
+        ctx.strokeStyle = '#526176';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(winX - 4, winY - 4, winW + 8, winH + 8);
+        ctx.strokeStyle = 'rgba(125,211,252,.48)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(winX + 5, winY + 5, winW - 10, winH - 10);
+        for (const [bx, by] of [[winX,winY],[winX+winW,winY],[winX,winY+winH],[winX+winW,winY+winH]]) {
+          ctx.fillStyle = '#a7b3c5'; ctx.beginPath(); ctx.arc(bx,by,3,0,Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+
+        // Corridor perspective: ceiling, side bulkheads and floor converge at the far hatch.
+        const horizonX = w * .49, horizonY = h * .34;
+        const ceiling = ctx.createLinearGradient(0, 0, 0, horizonY);
+        ceiling.addColorStop(0, '#090e18'); ceiling.addColorStop(1, '#344052');
+        ctx.fillStyle = ceiling;
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(w, 0); ctx.lineTo(w * .78, horizonY); ctx.lineTo(w * .22, horizonY); ctx.closePath(); ctx.fill();
+        const leftWall = ctx.createLinearGradient(0, 0, w * .28, 0);
+        leftWall.addColorStop(0, '#05080e'); leftWall.addColorStop(1, '#273345');
+        ctx.fillStyle = leftWall;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w * .22, horizonY); ctx.lineTo(w * .22, floorBottom); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+        const rightWall = ctx.createLinearGradient(w, 0, w * .72, 0);
+        rightWall.addColorStop(0, '#05080e'); rightWall.addColorStop(1, '#273345');
+        ctx.fillStyle = rightWall;
+        ctx.beginPath(); ctx.moveTo(w, 0); ctx.lineTo(w * .78, horizonY); ctx.lineTo(w * .78, floorBottom); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+
+        const floorGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+        floorGrad.addColorStop(0, '#344052'); floorGrad.addColorStop(.25, '#141e2d'); floorGrad.addColorStop(1, '#05080e');
+        ctx.fillStyle = floorGrad;
+        ctx.beginPath(); ctx.moveTo(w * .22, horizonY); ctx.lineTo(w * .78, horizonY); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+
+        // Repeating ribs and floor guide strips create depth and movement.
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 7; i++) {
+          const t = i / 7, y = horizonY + Math.pow(t, 1.7) * (h - horizonY);
+          const spread = 0.22 + t * .78;
+          ctx.strokeStyle = i % 2 ? 'rgba(125,211,252,.12)' : 'rgba(148,163,184,.18)';
+          ctx.beginPath(); ctx.moveTo(w * (0.5 - spread * .28), y); ctx.lineTo(w * (0.5 + spread * .28), y); ctx.stroke();
+        }
+        for (const side of [-1, 1]) {
+          ctx.strokeStyle = 'rgba(125,211,252,.22)'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(horizonX + side * 5, horizonY); ctx.lineTo(horizonX + side * w * .5, h); ctx.stroke();
+          for (let i = 1; i <= 5; i++) {
+            const t = i / 6, y = horizonY + t * (h - horizonY) * .86;
+            const x = side < 0 ? w * (.22 - t * .2) : w * (.78 + t * .2);
+            ctx.fillStyle = i % 2 ? '#26384b' : '#172435';
+            ctx.fillRect(x - 9, y, 18, 5 + t * 8);
+          }
+        }
+        // Ceiling light strips and pulsing emergency beacons.
+        for (let i = 0; i < 5; i++) {
+          const t = i / 5, y = 12 + t * (horizonY - 18), half = 18 + t * w * .2;
+          ctx.fillStyle = 'rgba(125,211,252,.12)';
+          ctx.fillRect(horizonX - half, y, half * 2, 3 + t * 4);
+        }
+        const alarm = .35 + .35 * Math.sin(state.time * 5.2);
+        ctx.fillStyle = `rgba(239,68,68,${alarm})`;
+        ctx.fillRect(w * .12, h * .17, 18, 5);
+        ctx.fillRect(w * .86, h * .17, 18, 5);
+
+        // Distant movement behind the fight: silhouettes crossing the far hatch.
+        const shadowX = horizonX + Math.sin(state.time * .72) * w * .07;
+        const shadowY = horizonY + 28 + Math.sin(state.time * 2.1) * 4;
+        ctx.save();
+        ctx.globalAlpha = .16 + .08 * Math.sin(state.time * 3.1);
+        ctx.fillStyle = '#02050a';
+        ctx.beginPath();
+        ctx.ellipse(shadowX, shadowY, 10, 24, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(shadowX - 7, shadowY - 7, 14, 34);
+        ctx.restore();
+
+        // A few electrical sparks in the damaged ceiling.
+        for (let i = 0; i < 4; i++) {
+          const sx = (w * (.24 + i * .17) + Math.sin(state.time * (5 + i) + i) * 18);
+          const sy = horizonY - 12 + (i % 2) * 14;
+          if (Math.sin(state.time * (7 + i) + i) > .72) {
+            ctx.strokeStyle = 'rgba(125,211,252,.8)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 5, sy + 9); ctx.lineTo(sx - 2, sy + 16); ctx.stroke();
+          }
+        }
+
+        const beaconAlpha = 0.035 + 0.035 * Math.sin(state.time * 5.5);
         const beaconGrad = ctx.createRadialGradient(w * 0.45, 10, 6, w * 0.45, floorTop + 80, 260);
         beaconGrad.addColorStop(0, `rgba(239, 68, 68, ${beaconAlpha * 2.2})`);
         beaconGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
         ctx.fillStyle = beaconGrad;
         ctx.fillRect(0, 0, w, h);
-
-        const floorGrad = ctx.createLinearGradient(0, floorTop, 0, h);
-        floorGrad.addColorStop(0, '#0c131f');
-        floorGrad.addColorStop(0.5, '#080c14');
-        floorGrad.addColorStop(1, '#04060a');
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, floorTop, w, h - floorTop);
-
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
-        ctx.lineWidth = 1;
-        for (let gx = 0; gx < w; gx += 64) {
-          ctx.beginPath();
-          ctx.moveTo(gx, floorTop);
-          ctx.lineTo(gx - 18, floorBottom);
-          ctx.stroke();
-        }
-        for (let gy = floorTop; gy <= floorBottom; gy += 36) {
-          ctx.beginPath();
-          ctx.moveTo(0, gy);
-          ctx.lineTo(w, gy);
-          ctx.stroke();
-        }
 
         for (const d of state.decals) {
           ctx.fillStyle = d.color;
@@ -2270,6 +2435,12 @@
         document.getElementById('hud-weap-txt').textContent = w.name.split(' ').slice(-1)[0].toUpperCase();
         document.getElementById('heat-fill').style.width = `${Math.min(100, state.weaponHeat)}%`;
         document.getElementById('hud-wave-txt').textContent = `W${state.wave}`;
+        const danger = state.wave >= 20 ? 'KATASZTROFÁLIS' : state.wave >= 12 ? 'KRITIKUS' : state.wave >= 7 ? 'MAGAS' : state.wave >= 4 ? 'EMELT' : 'ALACSONY';
+        const dangerEl = document.getElementById('hud-difficulty-txt');
+        if (dangerEl) {
+          dangerEl.textContent = danger;
+          dangerEl.style.color = state.wave >= 12 ? '#fb7185' : state.wave >= 7 ? '#f97316' : state.wave >= 4 ? '#fbbf24' : '#86efac';
+        }
         document.getElementById('hud-coins-txt').textContent = `${state.coins} Cr`;
         document.getElementById('modal-coins').textContent = `${state.coins} Cr`;
         document.getElementById('shop-badge').classList.toggle('show', hasAffordableUpgrade());
@@ -2505,7 +2676,7 @@
         joyKnob.style.top = '33px';
       }
 
-      joyZone.addEventListener('pointerdown', e => { joyState.active = true; joyState.id = e.pointerId; updateJoystick(e.clientX, e.clientY); });
+      joyZone.addEventListener('pointerdown', e => { e.preventDefault(); joyState.active = true; joyState.id = e.pointerId; try { joyZone.setPointerCapture(e.pointerId); } catch (_) {} updateJoystick(e.clientX, e.clientY); });
       window.addEventListener('pointermove', e => { if (joyState.active && e.pointerId === joyState.id) updateJoystick(e.clientX, e.clientY); });
       window.addEventListener('pointerup', e => { if (joyState.active && e.pointerId === joyState.id) resetJoystick(); });
       window.addEventListener('pointercancel', e => { if (joyState.active && e.pointerId === joyState.id) resetJoystick(); });
@@ -2557,10 +2728,21 @@
       document.getElementById('btn-start').addEventListener('click', resetGame);
       document.getElementById('btn-restart').addEventListener('click', resetGame);
 
+      canvas.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button === 0 && state.running && !state.paused) {
+          state.firingManual = true;
+          AudioEngine.init();
+          fireWeapon();
+        }
+      });
+      window.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') state.firingManual = false; });
       window.addEventListener('keydown', e => {
+        if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code) && state.running) e.preventDefault();
         state.keys.add(e.code);
         if (e.code === 'Escape' && menuModal.classList.contains('active')) closeMenu();
+        else if (e.code === 'Escape' && state.running && !state.paused) openMenu();
         else if (e.code === 'KeyQ' && state.running && !state.paused) document.getElementById('btn-switch-weap').click();
+        else if (e.code === 'KeyE' && state.running && !state.paused) autoBtn.click();
       });
       window.addEventListener('keyup', e => { state.keys.delete(e.code); });
       window.addEventListener('resize', resizeCanvas);
