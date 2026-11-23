@@ -1197,7 +1197,7 @@ GRÁNÁT</button>
           return 'CORRIDOR-1000D hibajelentés\n' + navigator.userAgent + '\n' + `FPS ${this.fps} (min ${this.fpsMin}) képkocka ${this.ms.toFixed(1)} ms\n` + this.log.map(x => `${x.code} ×${x.n} ${x.t} ${this.codes[x.code] || ''} ${x.msg}`).join('\n');
         }
       };
-      try { const old = JSON.parse(localStorage.getItem('c1k_errlog') || '[]'); if (Array.isArray(old)) Dbg.log = old.slice(0, 30); } catch (_) {}
+      try { const old = JSON.parse(localStorage.getItem('c1k_errlog') || '[]'); if (Array.isArray(old)) Dbg.log = old.filter(x => x && !/^Stresszteszt/.test(x.msg || '')).slice(0, 30); } catch (_) {}
       window.addEventListener('error', e => { if (e && e.message) Dbg.report('E100', e.message + (e.lineno ? ' @' + e.lineno : '')); });
       window.addEventListener('unhandledrejection', e => Dbg.report('E101', e && e.reason && (e.reason.message || e.reason)));
 
@@ -4966,7 +4966,10 @@ GRÁNÁT</button>
         saveSettings(); applyQuality(); updatePerfUi();
       });
       document.getElementById('dg-stress').addEventListener('click', () => {
-        if (!state.running || state.gameOver) { Dbg.report('W703', 'Stresszteszt csak bevetés közben indítható'); return; }
+        const sb = document.getElementById('dg-stress');
+        if (!state.running || state.gameOver) { // nem hiba: csak jelezzük a gombon, a naplóba nem kerül
+          sb.textContent = '▶ ELŐBB INDÍTS BEVETÉST'; clearTimeout(sb._t); sb._t = setTimeout(() => { sb.textContent = '☣ +100 SZÖRNY'; }, 1800); return;
+        }
         const types = ['swarmer', 'larva', 'stalker', 'lurker', 'bomber', 'spitter', 'brute', 'wraith'];
         for (let i = 0; i < 100; i++) { const e = spawnEnemy(types[i % types.length]); e.x = state.width * 0.55 + Math.random() * state.width * 0.6; }
       });

@@ -1,6 +1,6 @@
 // v9: hálózat-először stratégia – online mindig a legfrissebb verzió töltődik,
 // offline a gyorsítótárból indul. Új verziónál a játék magától frissül.
-const CACHE_NAME = 'alone-in-the-corridor-1000-days-v13';
+const CACHE_NAME = 'alone-in-the-corridor-1000-days-v13b';
 const ASSETS = [
   './',
   './index.html',
