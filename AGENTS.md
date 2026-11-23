@@ -39,6 +39,8 @@ The current version is the owner's **accepted baseline**. You may change it **on
 - v8 meat-grinder: combo tiers (VÉRFÜRDŐ … 1000 NAP DÜHE), sprite-shatter gibs baked into a persistent floor layer, hit-stop, grenade (G), adrenaline (F)
 - v8 UI/controls: main menu views (Napló, Irányítás, Beállítások), custom riveted `.hbtn` buttons, settings persisted (`c1k_settings`), records (`c1k_best`), floating joystick, multitouch-safe fire, tap-anywhere-right fire, mouse aim, number keys/wheel, gamepad, weapon strip
 - Pixel buffer uses PX=2 so the 34px hero/monster sprites stay 1:1 (don't raise PX again)
+- v13 performance & debug: cached static corridor background, single glow sprite for all lights (no per-light gradients), x-grid projectile collision, effect LOD when >80 monsters (`state.heavy`), audio voice budget + cached noise buffers – 300+ monsters must stay smooth
+- v13 **built-in debugger** (📊 / F3 / tap the FPS meter) with error codes E100–E600 / W700–W703, copyable report, stress test (+100 monsters), quality AUTO/HIGH/LOW; **FPS meter** (setting); **blood drying** speed setting (GYORS/NORMÁL/LASSÚ); compact one-row HUD on short screens, raised floor (bigger play area)
 
 ## Ideas that fit the direction (welcome)
 Better hero sprite, redrawn barricade, boss animations, more monster hybrids, story screens between waves, custom icon, save/high-score, more gore polish, performance tuning.

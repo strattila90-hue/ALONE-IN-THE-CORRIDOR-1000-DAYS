@@ -42,6 +42,28 @@
   - `ESC`: taktika / bolt menü
 - **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
+## Sebességmérő és hibakereső (v13)
+
+- Alul középen (asztalon jobb alsó sarokban) a **sebességmérő**: `FPS · képkocka-idő`. Zöld ≥ 50, sárga ≥ 30, piros < 30 FPS. Kikapcsolható: Beállítások → Sebességmérő.
+- Koppints rá (vagy **F3** / 📊) → **Hibakereső**: élő mérések (logika/rajzolás ms, szörnyek, részecskék), hibanapló hibakódokkal, `+100 SZÖRNY` stresszteszt, grafikai minőség (AUTO / MAGAS / ALACSONY), `MÁSOLÁS` (hibajelentés vágólapra).
+
+| Kód | Jelentés |
+|---|---|
+| E100 | JavaScript-hiba a játékban |
+| E101 | Kezeletlen aszinkron (Promise) hiba |
+| E200 | Játéklogika hiba (update) |
+| E201 | Kirajzolási hiba (render) |
+| E300 | Hangmotor nem indult |
+| E400 | Mentés sikertelen (localStorage) |
+| E500 | Frissítés / Service Worker hiba |
+| E600 | Grafikus vászon elveszett |
+| W700 | Alacsony FPS (30 alatt, 3 mp-ig) |
+| W701 | Akadás: 120 ms-nál hosszabb képkocka |
+| W702 | Automatikus minőségcsökkentés bekapcsolt |
+| W703 | Effekt-limit elérve (részecskék ritkítva) |
+
+A **vér felszáradása** (Beállítások): GYORS (~10 mp, alapértelmezett) / NORMÁL / LASSÚ.
+
 ## Élesítés (GitHub Pages / Vercel) és Android APK
 
 1. Töltsd fel az összes fájlt (`index.html`, `manifest.json`, `sw.js`, `icon.svg`, `README.md`) a GitHub repód gyökerébe.
