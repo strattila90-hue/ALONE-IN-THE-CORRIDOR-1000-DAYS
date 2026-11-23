@@ -841,6 +841,13 @@ canvas#gameCanvas{cursor:crosshair}
 }
 @media (hover:hover) and (pointer:fine) and (min-width:900px){#left-action-pad{display:none}}
 </style>
+<style id="v15-gpu">
+/* v15: HUD-csíkok transform-mal (nincs layout), alacsony minőségnél a teljes képernyős CSS-rétegek kikapcsolnak (kevesebb GPU-kitöltés) */
+.bar-fill,#combo-fill,#adren-fill,#boss-fill{width:100% !important;transform-origin:left center;transform:scaleX(0);transition:transform .12s linear !important;will-change:transform}
+#hp-fill,#shield-fill,#barricade-fill{transform:scaleX(1)}
+#game-root.lowq .noir-scanlines{display:none}
+#game-root.lowq .noir-vignette{box-shadow:inset 0 0 60px #000}
+</style>
 <style id="v13-perf-debug">
 /* ===== v13: sebességmérő, hibakereső, tisztább gombok, kompaktabb HUD (nagyobb játéktér) ===== */
 #fps-meter{position:absolute;left:50%;transform:translateX(-50%);bottom:max(4px,env(safe-area-inset-bottom));z-index:16;font:900 10px "Courier New",monospace;letter-spacing:.06em;padding:2px 7px;background:rgba(8,4,3,.82);border:2px solid #000;box-shadow:inset 0 0 0 1px #5a4636;color:#86efac;cursor:pointer;pointer-events:auto;white-space:nowrap;text-shadow:1px 1px 0 #000}
@@ -1148,6 +1155,7 @@ GRÁNÁT</button>
       'use strict';
 
       // ===================== v13: BEÉPÍTETT HIBAKERESŐ (hibakódokkal) + SEBESSÉGMÉRŐ =====================
+      const GAME_VERSION = 'v15';
       const Dbg = {
         codes: {
           E100: 'JavaScript-hiba a játékban',
@@ -1194,7 +1202,7 @@ GRÁNÁT</button>
           return f ? `${m} [${f[1] || '?'}:${f[2]}]` : m;
         },
         text() {
-          return 'CORRIDOR-1000D hibajelentés\n' + navigator.userAgent + '\n' + `FPS ${this.fps} (min ${this.fpsMin}) képkocka ${this.ms.toFixed(1)} ms\n` + this.log.map(x => `${x.code} ×${x.n} ${x.t} ${this.codes[x.code] || ''} ${x.msg}`).join('\n');
+          return 'CORRIDOR-1000D hibajelentés ' + GAME_VERSION + '\n' + navigator.userAgent + `\nkijelző ${screen.width}×${screen.height} @${(window.devicePixelRatio || 1).toFixed(2)} · minőség ${typeof settings !== 'undefined' ? settings.quality : '?'}${typeof lowQ !== 'undefined' && lowQ ? ' (alacsony aktív)' : ''} · kijelző ${this.hz || '?'} Hz` + '\n' + `FPS ${this.fps} (min ${this.fpsMin}) képkocka ${this.ms.toFixed(1)} ms\n` + this.log.map(x => `${x.code} ×${x.n} ${x.t} ${this.codes[x.code] || ''} ${x.msg}`).join('\n');
         }
       };
       try { const old = JSON.parse(localStorage.getItem('c1k_errlog') || '[]'); if (Array.isArray(old)) Dbg.log = old.filter(x => x && !/^Stresszteszt/.test(x.msg || '')).slice(0, 30); } catch (_) {}
@@ -1745,6 +1753,14 @@ GRÁNÁT</button>
         out.width = w * sc; out.height = h * sc;
         const o = out.getContext('2d'); o.imageSmoothingEnabled = false;
         o.drawImage(small, 0, 0, w * sc, h * sc);
+        // v15: a húscafat-darabolás itt, a CPU-n számolódik ki (korábban halálkor GPU-visszaolvasás = 100–200 ms akadás telefonon)
+        const W2 = out.width, H2 = out.height, n = W2 > 120 ? 6 : 4, cw = Math.ceil(W2 / n), chh = Math.ceil(H2 / n), ch = [];
+        for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+          let cnt = 0;
+          for (let y = Math.floor(j * chh / sc); y < Math.min(h, Math.ceil((j + 1) * chh / sc)); y++) for (let x = Math.floor(i * cw / sc); x < Math.min(w, Math.ceil((i + 1) * cw / sc)); x++) if (s0[(y * w + x) * 4 + 3] > 40) cnt++;
+          if (cnt > 2) ch.push([i * cw, j * chh, Math.min(cw, W2 - i * cw), Math.min(chh, H2 - j * chh)]);
+        }
+        out._chunks = ch;
         return out;
       }
 
@@ -1760,7 +1776,7 @@ GRÁNÁT</button>
 
       function makePen(w, h) {
         const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-        const c = cv.getContext('2d');
+        const c = cv.getContext('2d', { willReadFrequently: true }); // v15: CPU-oldali vászon – a getImageData nem akasztja meg a GPU-t
         const K = PAL.K;
         const pen = {
           cv, c, eyes: [],
@@ -2231,7 +2247,7 @@ GRÁNÁT</button>
       canvas.parentNode.insertBefore(buf, canvas);
       let PX = 3, CW = 1280, CH = 720, Z = 1;
       let uiScale = 1;
-      let lowQ = false, lagTicks = 0; // v10: automatikus minőségcsökkentés lag esetén
+      let lowQ = false, lagTicks = 0, skipLag = 2; // v10: automatikus minőségcsökkentés lag esetén
       try { const sv = parseFloat(localStorage.getItem('c1k_ui')); uiScale = sv > 0 ? sv : (window.matchMedia('(hover:hover) and (pointer:fine)').matches ? 0.7 : 1); } catch (_) {}
       function applyUi() { document.getElementById('game-root').style.setProperty('--ui', uiScale); }
 
@@ -2338,6 +2354,7 @@ GRÁNÁT</button>
       }
 
       function resizeCanvas() {
+        skipLag = Math.max(skipLag, 45); // átméretezés/teljes képernyő után ne jelezzen hamis akadást
         const rect = document.getElementById('game-root').getBoundingClientRect();
         const w = Math.max(320, Math.floor(rect.width || window.innerWidth || 960));
         const h = Math.max(240, Math.floor(rect.height || window.innerHeight || 540));
@@ -2353,6 +2370,7 @@ GRÁNÁT</button>
         ctx.imageSmoothingEnabled = false;
         // v8: fix 2-es pixelrács – a hős sprite 1:1-ben látszik (a korábbi 3-4x lekicsinyítés elnyelte a részleteket)
         PX = lowQ ? 3 : (state.height >= 300 ? 2 : 1);
+        document.getElementById('game-root').classList.toggle('lowq', lowQ);
         buf.width = Math.ceil(state.width / PX);
         buf.height = Math.ceil(state.height / PX);
         bctx.imageSmoothingEnabled = false;
@@ -4343,7 +4361,8 @@ GRÁNÁT</button>
       // HUD: csak akkor nyúl a DOM-hoz, ha az érték tényleg változott (mobilon sokkal simább).
       const hudCache = {};
       function setTxt(id, v) { if (hudCache[id] === v) return; hudCache[id] = v; const el = document.getElementById(id); if (el) el.textContent = v; }
-      function setW(id, pct) { const v = Math.max(0, Math.min(100, Math.round(pct))) + '%'; const k = 'w_' + id; if (hudCache[k] === v) return; hudCache[k] = v; const el = document.getElementById(id); if (el) el.style.width = v; }
+      // v15: a csíkok transform-mal skálázódnak (csak GPU-kompozitálás, nincs elrendezés-újraszámolás minden lövésnél)
+      function setW(id, pct) { const v = Math.max(0, Math.min(100, Math.round(pct))); const k = 'w_' + id; if (hudCache[k] === v) return; hudCache[k] = v; const el = document.getElementById(id); if (el) el.style.transform = 'scaleX(' + v / 100 + ')'; }
       function setCls(id, cls, on) { const k = 'c_' + id + cls; if (hudCache[k] === on) return; hudCache[k] = on; const el = document.getElementById(id); if (el) el.classList.toggle(cls, on); }
       let stripSig = '';
       function buildWeaponStrip() {
@@ -4997,11 +5016,14 @@ GRÁNÁT</button>
       let fpsAccum = 0;
       let fpsFrames = 0;
 
-      let skipLag = 2, fpsMinWin = 99, fpsMinT = 0;
+      let fpsMinWin = 99, fpsMinT = 0, nextFrameAt = 0, rafN = 0, rafT = 0;
       document.addEventListener('visibilitychange', () => { skipLag = 3; });
       function loop(now) {
         requestAnimationFrame(loop);
-        if (now - lastTs < 15) return; // v12: 90/120 Hz kijelzőn is max ~60 fps – feleannyi terhelés
+        rafN++; if (now - rafT >= 1000) { Dbg.hz = Math.round(rafN * 1000 / (now - rafT)); rafN = 0; rafT = now; }
+        // v15: célidős korlát – 120 Hz-en 60 FPS, 90 Hz-en is ~60 (korábban 45-re esett)
+        if (now < nextFrameAt - 4) return;
+        nextFrameAt = Math.max(nextFrameAt + 1000 / 60, now - 20);
         const rawDt = (now - lastTs) / 1000;
         lastTs = now;
         let dt = Math.min(0.05, Math.max(0.001, rawDt));
@@ -5021,8 +5043,8 @@ GRÁNÁT</button>
             Dbg.lowS = state.fps < 30 ? Dbg.lowS + 0.5 : 0;
             if (Dbg.lowS >= 3) { Dbg.report('W700', state.fps + ' FPS, szörny: ' + state.enemies.length + ', részecske: ' + state.particles.length); Dbg.lowS = -20; }
             if (!lowQ && settings.quality === 'auto') {
-              lagTicks = state.fps < 38 ? lagTicks + 1 : Math.max(0, lagTicks - 1);
-              if (lagTicks >= 6) { lowQ = true; resizeCanvas(); Dbg.report('W702', state.fps + ' FPS mellett'); }
+              lagTicks = state.fps < 46 ? lagTicks + 1 : Math.max(0, lagTicks - 1);
+              if (lagTicks >= 4) { lowQ = true; resizeCanvas(); skipLag = 30; Dbg.report('W702', state.fps + ' FPS mellett'); }
             }
           }
           fpsAccum = 0;
@@ -5052,8 +5074,8 @@ GRÁNÁT</button>
         if (!Dbg.open) return;
         const q = settings.quality === 'auto' ? (lowQ ? 'AUTO (alacsony)' : 'AUTO (magas)') : settings.quality === 'high' ? 'MAGAS' : 'ALACSONY';
         document.getElementById('dg-stats').innerHTML =
-          `<b class="${state.fps >= 50 ? 'g' : state.fps >= 30 ? 'y' : 'r'}">${state.fps} FPS</b> (5 mp min: ${Dbg.fpsMin || '–'}) · képkocka ${Dbg.ms.toFixed(1)} ms<br/>` +
-          `logika ${Dbg.tU.toFixed(1)} ms · rajzolás ${Dbg.tR.toFixed(1)} ms<br/>` +
+          `verzió <b>${GAME_VERSION}</b> · ` + `<b class="${state.fps >= 50 ? 'g' : state.fps >= 30 ? 'y' : 'r'}">${state.fps} FPS</b> (5 mp min: ${Dbg.fpsMin || '–'}) · képkocka ${Dbg.ms.toFixed(1)} ms<br/>` +
+          `kijelző ${Dbg.hz || '?'} Hz · logika ${Dbg.tU.toFixed(1)} ms · rajzolás ${Dbg.tR.toFixed(1)} ms<br/>` +
           `pálya ${state.width}×${state.height} · pixel ${PX}× · minőség: ${q}<br/>` +
           `szörny <b>${state.enemies.length}</b> · lövedék ${state.projectiles.length + state.enemyProjectiles.length} · részecske ${state.particles.length}<br/>` +
           `cafat ${state.gibs.length} · tetem ${state.corpses.length} · zsákmány ${state.pickups.length} · fény ${state.lights.length}` +
@@ -5099,6 +5121,13 @@ GRÁNÁT</button>
       window.addEventListener('keydown', e => { if (e.code === 'F3' || e.code === 'Backquote') { e.preventDefault(); setDebugOpen(!Dbg.open); } });
 
       if (/[?&]debug\b/.test(location.search)) window.__c1k = { state, Dbg, decalCv, getEnemySprite, spawnEnemy, paintSplat, startWave, triggerJumpScare, selectWeapon, explodeAt, WEAPONS };
+      // v15: előmelegítés – minden szörny-sprite, sziluett és húscafat-darabolás a menüben készül el, apránként (játék közben nincs döccenés)
+      (function prewarm() {
+        const jobs = [];
+        for (const t of Object.keys(ENEMY_TYPES)) for (let f = 0; f < 4; f++) jobs.push(() => { const sp = getEnemySprite(t, f); silhouette(sp, '#ffffff'); silhouette(sp, '#ff7a1a'); });
+        const step = () => { const t0 = performance.now(); while (jobs.length && performance.now() - t0 < 6) jobs.shift()(); if (jobs.length) setTimeout(step, 30); };
+        setTimeout(step, 300);
+      })();
       if (settings.quality === 'low') lowQ = true;
       resizeCanvas();
       initMenus();
