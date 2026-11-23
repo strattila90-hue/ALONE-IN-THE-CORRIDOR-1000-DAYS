@@ -1396,9 +1396,125 @@ html,body{overscroll-behavior:none}
           L(9, 15, 8 - a * 2, 22, 2, F); L(13, 15, 14 + a * 2, 22, 2, F);
           L(8, 10, 3, 17 + a, 2, F); claw(3, 17 + a); L(14, 10, 19, 17 + (1 - a), 2, F); claw(19, 17 + (1 - a)); ribs(11, 9, 6, 7); skull(11, 5);
         }
-        const fin = finishSprite(sp, sc);
+        // HD pass: Scale2x smoothing -> 2x detail grid, thin outline, flesh/blood detail, then wet shading.
+        const sp2 = fleshDetail(thinOutline(scale2x(sp)), typeKey);
+        const sc2 = { boss: 4, brute: 3, carrier: 3, screamer: 3, kraken: 3 }[typeKey] || 2;
+        const fin = finishSprite(sp2, sc2);
+        fin.legacy = (GW * sc) / fin.width;
+        fin.key = key;
         spriteCache.set(key, fin);
         return fin;
+      }
+
+      // EPX / Scale2x: doubles resolution and rounds off blocky diagonals (keeps exact palette colors).
+      function scale2x(src) {
+        const w = src.width, h = src.height, s = src.getContext('2d').getImageData(0, 0, w, h).data;
+        const out = document.createElement('canvas'); out.width = w * 2; out.height = h * 2;
+        const oc = out.getContext('2d'), img = oc.createImageData(w * 2, h * 2), d = img.data;
+        const px = (x, y) => { x = Math.max(0, Math.min(w - 1, x)); y = Math.max(0, Math.min(h - 1, y)); return (y * w + x) * 4; };
+        const eq = (i, j) => s[i] === s[j] && s[i + 1] === s[j + 1] && s[i + 2] === s[j + 2] && s[i + 3] === s[j + 3];
+        const put = (x, y, i) => { const o = (y * w * 2 + x) * 4; d[o] = s[i]; d[o + 1] = s[i + 1]; d[o + 2] = s[i + 2]; d[o + 3] = s[i + 3]; };
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const P = px(x, y), A = px(x, y - 1), B = px(x + 1, y), C = px(x - 1, y), D = px(x, y + 1);
+          const ok = !eq(A, D) && !eq(C, B);
+          put(2 * x, 2 * y, ok && eq(C, A) ? A : P);
+          put(2 * x + 1, 2 * y, ok && eq(A, B) ? B : P);
+          put(2 * x, 2 * y + 1, ok && eq(D, C) ? C : P);
+          put(2 * x + 1, 2 * y + 1, ok && eq(B, D) ? D : P);
+        }
+        oc.putImageData(img, 0, 0);
+        return out;
+      }
+
+      // After doubling, the 1px dark outline became 2px; peel the outer layer back to a crisp 1px line.
+      function thinOutline(cv) {
+        const w = cv.width, h = cv.height, c = cv.getContext('2d'), img = c.getImageData(0, 0, w, h), d = img.data, s = new Uint8ClampedArray(d);
+        const isK = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return false; const i = (y * w + x) * 4; return s[i + 3] > 200 && s[i] < 30 && s[i + 1] < 14 && s[i + 2] < 24; };
+        const isT = (x, y) => x < 0 || y < 0 || x >= w || y >= h || s[(y * w + x) * 4 + 3] < 40;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          if (!isK(x, y)) continue;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            if (isT(x + dx, y + dy) && isK(x - dx, y - dy) && !isT(x - 2 * dx, y - 2 * dy)) { d[(y * w + x) * 4 + 3] = 0; break; }
+          }
+        }
+        c.putImageData(img, 0, 0);
+        return cv;
+      }
+
+      // Flesh detail at 2x: top-down light with ordered dither, muscle fibres, veins, bone cracks, blood drips from maws and claws.
+      function fleshDetail(cv, typeKey) {
+        const w = cv.width, h = cv.height, c = cv.getContext('2d'), img = c.getImageData(0, 0, w, h), d = img.data, s = new Uint8ClampedArray(d);
+        let seed = 0; for (const ch of typeKey) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+        const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+        const hash = (x, y) => { let n = (x * 374761393 + y * 668265263 + seed) >>> 0; n = ((n ^ (n >>> 13)) * 1274126177) >>> 0; return (n & 1023) / 1023; };
+        const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+        const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? -1 : (y * w + x) * 4;
+        const opaque = (x, y) => { const i = at(x, y); return i >= 0 && s[i + 3] > 120; };
+        const isDark = (i) => s[i] < 30 && s[i + 1] < 14 && s[i + 2] < 24;
+        const kind = (i) => {
+          const r = s[i], g = s[i + 1], b = s[i + 2];
+          if (r > 230 && g > 210 && b > 180) return 'bone';
+          if (r > 240 && g > 220 && b < 140) return 'eye';
+          if (r > 90 && r < 120 && g < 20 && b < 30) return 'maw';
+          return 'flesh';
+        };
+        // veins: random walks across flesh
+        const veins = new Set();
+        for (let v = 0; v < 6; v++) {
+          let x = Math.floor(rnd() * w), y = Math.floor(h * 0.25 + rnd() * h * 0.6), dir = rnd() * 6.28;
+          for (let k = 0; k < 14; k++) { veins.add(x + ',' + y); dir += (rnd() - 0.5) * 1.4; x = Math.round(x + Math.cos(dir)); y = Math.round(y + Math.sin(dir)); }
+        }
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = at(x, y);
+          if (s[i + 3] < 120 || isDark(i)) continue;
+          const k0 = kind(i);
+          if (k0 === 'eye') continue;
+          let k = 1.16 - 0.38 * (y / h) - 0.06 * (x / w);
+          // ambient occlusion toward the lower/right edges
+          if (!opaque(x + 2, y) || !opaque(x, y + 2)) k *= 0.86;
+          k += (BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 0.14;
+          k = Math.round(k * 10) / 10;
+          let r = s[i] * k, g = s[i + 1] * k, b = s[i + 2] * k;
+          const hz = hash(x, y);
+          if (k0 === 'flesh') {
+            if ((x + y * 2 + Math.floor(hz * 3)) % 6 === 0) { r *= 0.8; g *= 0.74; b *= 0.78; } // muscle fibres
+            if (veins.has(x + ',' + y)) { r = r * 0.45 + 70; g *= 0.3; b = b * 0.4 + 30; }
+            if (y > h * 0.55 && hz > 0.93) { r = 120; g = 8; b = 18; } // blood flecks
+          } else if (k0 === 'bone') {
+            if (hz > 0.86) { r *= 0.7; g *= 0.66; b *= 0.6; }
+            if (y > h * 0.6 && hz < 0.12) { r = 150; g = 16; b = 26; }
+          }
+          d[i] = Math.min(255, r); d[i + 1] = Math.min(255, g); d[i + 2] = Math.min(255, b);
+        }
+        // blood drool from maws, red-soaked claw tips
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = at(x, y);
+          if (s[i + 3] < 120) continue;
+          const k0 = isDark(i) ? 'k' : kind(i);
+          if (k0 === 'maw' && hash(x, y) > 0.55) {
+            const len = 2 + Math.floor(hash(y, x) * 6);
+            for (let j = 1; j <= len; j++) {
+              const o = at(x, y + j); if (o < 0) break;
+              const last = j === len;
+              d[o] = last ? 196 : 138; d[o + 1] = last ? 24 : 8; d[o + 2] = last ? 36 : 20; d[o + 3] = 255;
+            }
+          } else if (k0 === 'bone' && y > h * 0.7 && hash(x + 3, y) > 0.4) {
+            d[i] = 168; d[i + 1] = 18; d[i + 2] = 30;
+            const o = at(x, y + 1); if (o >= 0 && hash(x, y + 7) > 0.6) { d[o] = 120; d[o + 1] = 6; d[o + 2] = 16; d[o + 3] = 255; }
+          }
+        }
+        c.putImageData(img, 0, 0);
+        return cv;
+      }
+
+      // White silhouette for hit flashes.
+      const flashCache = new Map();
+      function flashSprite(sp, key) {
+        if (flashCache.has(key)) return flashCache.get(key);
+        const cv = document.createElement('canvas'); cv.width = sp.width; cv.height = sp.height;
+        const x = cv.getContext('2d'); x.drawImage(sp, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,236,236,.85)'; x.fillRect(0, 0, cv.width, cv.height);
+        flashCache.set(key, cv);
+        return cv;
       }
 
       const canvas = document.getElementById('gameCanvas');
@@ -1469,6 +1585,7 @@ html,body{overscroll-behavior:none}
         decals: [],
         gibs: [],
         corpses: [],
+        pools: [], barBlood: [], screenBlood: [],
         wUp: {}, turretLevel: 0, turretY: 300, turretCd: 0, turretFlash: 0,
         rainDrops: []
       };
@@ -1487,9 +1604,71 @@ html,body{overscroll-behavior:none}
         state.floatingTexts.push({ x, y, text, color, life: 0.75, maxLife: 0.75 });
       }
 
+      // Blood layer: decals are baked into a persistent low-res canvas so the floor can soak up unlimited gore cheaply.
+      const bloodCv = document.createElement('canvas');
+      const bloodCtx = bloodCv.getContext('2d');
+      function bakeDecal(d) {
+        const g = bloodCtx, r = d.radius;
+        g.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+        g.fillStyle = d.color;
+        for (let i = 0; i < 7; i++) {
+          const a = (d.seed * (i + 1) * 12.9898) % 6.283, rr = r * ((i * 0.37 + d.seed) % 1), sz = 3 + ((i * 7 + d.seed * 5) % 5);
+          g.fillRect(d.x + Math.cos(a) * rr * 1.2 - sz / 2, d.y + Math.sin(a) * rr * 0.5 - sz / 2, sz, sz * 0.7);
+        }
+        g.beginPath(); g.ellipse(d.x, d.y, r * 0.62, r * 0.26, 0, 0, 6.283); g.fill();
+        if (r >= 10) {
+          g.beginPath(); g.ellipse(d.x + r * 0.25, d.y + r * 0.06, r * 0.4, r * 0.17, 0, 0, 6.283); g.fill();
+          if (d.color[0] === '#') { g.fillStyle = 'rgba(255,90,100,.18)'; g.fillRect(d.x - r * 0.3, d.y - r * 0.12, r * 0.3, 2); }
+        }
+      }
+      function rebakeBlood() {
+        bloodCv.width = buf.width; bloodCv.height = buf.height;
+        bloodCtx.imageSmoothingEnabled = false;
+        for (const d of state.decals) bakeDecal(d);
+      }
+      function fadeBlood(a) {
+        bloodCtx.setTransform(1, 0, 0, 1, 0, 0);
+        bloodCtx.globalCompositeOperation = 'destination-out';
+        bloodCtx.fillStyle = 'rgba(0,0,0,' + a + ')'; bloodCtx.fillRect(0, 0, bloodCv.width, bloodCv.height);
+        bloodCtx.globalCompositeOperation = 'source-over';
+      }
       function addDecal(x, y, color = 'rgba(127, 29, 29, 0.42)', radius = 14) {
-        if (state.decals.length > 260) state.decals.shift();
-        state.decals.push({ x, y, color, radius, seed: Math.random() * 10 + 1 });
+        if (state.decals.length > 420) state.decals.shift();
+        const d = { x, y, color, radius, seed: Math.random() * 10 + 1 };
+        state.decals.push(d);
+        bakeDecal(d);
+      }
+      const BLOOD_COLS = ['#8a0a14', '#a3121f', '#6e0912', '#c0182a', '#5a0710'];
+      // Droplets with gravity: they arc through the air and splat onto the floor where they land.
+      function spawnBlood(x, y, n, dirX = 0, power = 1, floorY = null, green = false) {
+        if (state.particles.length > 760) return;
+        const fy = floorY != null ? floorY : y + 14 + Math.random() * 10;
+        for (let i = 0; i < n; i++) {
+          const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.4 + dirX * 0.9;
+          const spd = (60 + Math.random() * 230) * power;
+          state.particles.push({
+            x: x + (Math.random() - 0.5) * 6, y: y + (Math.random() - 0.5) * 6,
+            vx: Math.cos(ang) * spd + dirX * 120 * power, vy: Math.sin(ang) * spd,
+            life: 1.6, maxLife: 1.6, gravity: 720, floorY: fy + (Math.random() - 0.5) * 10, blood: true,
+            color: green && Math.random() < 0.5 ? '#5f8f14' : BLOOD_COLS[Math.floor(Math.random() * BLOOD_COLS.length)],
+            size: 2 + Math.random() * 3.2
+          });
+        }
+      }
+      function addPool(x, y, r) {
+        if (state.pools.length > 24) bakeDecal(state.pools.shift());
+        state.pools.push({ x, y, radius: r * 0.25, max: r, color: '#5a0710', seed: Math.random() * 10 + 1 });
+      }
+      function smearBarricade(y) {
+        if (state.barBlood.length > 46) state.barBlood.shift();
+        state.barBlood.push({ y: y + (Math.random() - 0.5) * 16, len: 2, max: 8 + Math.random() * 34, w: 2 + Math.floor(Math.random() * 4), dx: Math.floor(Math.random() * 12) - 6 });
+      }
+      function splatterScreen(n) {
+        for (let i = 0; i < n; i++) {
+          if (state.screenBlood.length > 10) state.screenBlood.shift();
+          const edge = Math.random() < 0.5;
+          state.screenBlood.push({ x: edge ? (Math.random() < 0.5 ? Math.random() * 0.22 : 0.78 + Math.random() * 0.22) * state.width : Math.random() * state.width, y: Math.random() * state.height * 0.8, r: 14 + Math.random() * 34, life: 2.6, seed: Math.random() * 10, drip: 0 });
+        }
       }
 
       function resizeCanvas() {
@@ -1510,6 +1689,7 @@ html,body{overscroll-behavior:none}
         buf.width = Math.ceil(state.width / PX);
         buf.height = Math.ceil(state.height / PX);
         bctx.imageSmoothingEnabled = false;
+        rebakeBlood();
         const floorTop = Math.floor(state.height * 0.24);
         const floorBottom = Math.floor(state.height * 0.90);
         state.player.x = Math.max(54, Math.min(state.player.x, getBarricadeX() - 36));
@@ -1576,6 +1756,8 @@ html,body{overscroll-behavior:none}
         state.decals = [];
         state.gibs = [];
         state.corpses = [];
+        state.pools = []; state.barBlood = []; state.screenBlood = [];
+        rebakeBlood();
         state.wUp = {}; state.turretLevel = 0; state.turretCd = 0; state.turretFlash = 0; state.turretY = state.height * 0.55;
         state.player.x = Math.max(68, Math.floor(getBarricadeX() * 0.46));
         state.player.y = Math.floor(state.height * 0.58);
@@ -1594,6 +1776,7 @@ html,body{overscroll-behavior:none}
         state.waveKills = 0;
         state.waveTargetKills = 9 + nextWave * 4;
         state.spawnTimer = 0.4;
+        fadeBlood(0.1);
         if (state.barricadeHp > 0) {
           state.barricadeHp = Math.min(state.barricadeMaxHp, state.barricadeHp + Math.round(state.barricadeMaxHp * 0.15));
         }
@@ -1766,7 +1949,10 @@ html,body{overscroll-behavior:none}
         addFloatingText(enemy.x, enemy.y - enemy.radius - 6, isCrit ? `${dmg}!` : `${dmg}`, isCrit ? '#fde047' : '#f8fafc');
         spawnParticles(enemy.x, enemy.y, 4, enemy.accent, 35, 140, 0.22, 2.5);
         spawnParticles(enemy.x, enemy.y, 7, Math.random() < 0.6 ? '#a3121f' : '#6fa31a', 40, 190, 0.45, 4);
-        if (Math.random() < 0.3) spawnGibs(enemy, 1);
+        const green = enemy.typeKey === 'spitter' || enemy.typeKey === 'snail';
+        spawnBlood(enemy.x + enemy.radius * 0.3, enemy.y - enemy.radius * 0.2, Math.min(16, 4 + Math.round(dmg / 5)), 1, isCrit ? 1.4 : 1, enemy.y + enemy.radius, green);
+        enemy.hurtT = 0.12;
+        if (Math.random() < 0.4) spawnGibs(enemy, 1);
         if (enemy.hp <= 0) handleEnemyDeath(enemy);
       }
 
@@ -1784,8 +1970,14 @@ html,body{overscroll-behavior:none}
         // Stilizált, idegen nyálkaeffektus – nem naturális találati látvány.
         addDecal(enemy.x, enemy.y + enemy.radius * 0.65, Math.random() < 0.55 ? '#5a0e16' : '#4a7a12', Math.min(34, enemy.radius * 1.3));
         spawnGibs(enemy, enemy.isBoss ? 44 : (enemy.radius >= 20 ? 20 : 11));
-        state.corpses.push({ sp: getEnemySprite(enemy.typeKey, enemy.animFrame), x: enemy.x, y: enemy.y, r: enemy.radius, life: 14 });
-        if (state.corpses.length > 22) state.corpses.shift();
+        const dsp = getEnemySprite(enemy.typeKey, enemy.animFrame);
+        const torn = !enemy.isBoss && Math.random() < 0.6;
+        state.corpses.push({ sp: dsp, torn, x: enemy.x, y: enemy.y, r: enemy.radius, life: 26, spurt: enemy.isBoss ? 3.5 : 1.3 + Math.random() * 0.8, sx: enemy.x + (Math.random() - 0.5) * enemy.radius * 0.6 });
+        if (state.corpses.length > 30) state.corpses.shift();
+        if (torn) spawnGibs(enemy, 1, dsp);
+        spawnBlood(enemy.x, enemy.y - enemy.radius * 0.3, enemy.isBoss ? 90 : 30, 0.6, 1.3, enemy.y + enemy.radius, enemy.typeKey === 'spitter' || enemy.typeKey === 'snail');
+        addPool(enemy.x, enemy.y + enemy.radius * 0.7, Math.min(enemy.isBoss ? 80 : 44, enemy.radius * 1.9));
+        if (enemy.x < getBarricadeX() + 90) for (let q = 0; q < 3; q++) smearBarricade(enemy.y);
         spawnParticles(enemy.x, enemy.y, 26, '#a3121f', 60, 320, 0.6, 5);
         spawnParticles(enemy.x, enemy.y, 10, '#5a0e16', 30, 200, 0.8, 6);
         for (let q = 0; q < 3; q++) addDecal(enemy.x + (Math.random() - 0.5) * 50, enemy.y + enemy.radius * 0.6 + (Math.random() - 0.3) * 18, Math.random() < 0.7 ? '#5a0e16' : '#7a1018', 14 + Math.random() * 16);
@@ -1858,6 +2050,8 @@ html,body{overscroll-behavior:none}
           state.player.invulnTimer = 0.42;
           triggerShake(4.2, 0.16);
           addDecal(state.player.x, state.player.y + 18, 'rgba(185, 28, 28, 0.52)', 16);
+          spawnBlood(state.player.x, state.player.y - 6, 10, -0.6, 0.9, state.player.y + 22);
+          splatterScreen(rem >= 20 ? 3 : 1);
           spawnParticles(state.player.x, state.player.y, 8, '#ef4444', 50, 180, 0.32, 3);
           addFloatingText(state.player.x, state.player.y - 26, `-${rem} HP`, '#f87171');
         }
@@ -2061,6 +2255,12 @@ html,body{overscroll-behavior:none}
           if (e.hp <= 0) { state.enemies.splice(i, 1); continue; }
           if (e.isBoss) bossRef = e;
           if (e.hitFlash > 0) e.hitFlash -= dt;
+          if (e.hurtT > 0) e.hurtT -= dt;
+          if (Math.random() < dt * 1.5 && e.x < state.width) addDecal(e.x + (Math.random() - 0.5) * 8, e.y + e.radius, Math.random() < 0.5 ? '#4a0b12' : '#3f6a10', 5);
+          if (e.hp < e.maxHp * 0.6 && Math.random() < dt * (e.hp < e.maxHp * 0.3 ? 6 : 2.5)) {
+            const g = state.particles.length < 760;
+            if (g) state.particles.push({ x: e.x + (Math.random() - 0.5) * e.radius, y: e.y - e.radius * 0.2, vx: (Math.random() - 0.3) * 40, vy: -20, life: 1.2, maxLife: 1.2, gravity: 600, floorY: e.y + e.radius + (Math.random() - 0.5) * 6, blood: true, color: BLOOD_COLS[Math.floor(Math.random() * 5)], size: 2 + Math.random() * 2 });
+          }
           e.animTimer += dt * (e.speed / 24);
           e.animFrame = Math.floor(e.animTimer) % 2;
 
@@ -2094,6 +2294,7 @@ html,body{overscroll-behavior:none}
               state.barricadeHp = Math.max(0, state.barricadeHp - e.barDmg);
               state.barricadeZapTimer = 0.14;
               spawnParticles(barX + 6, e.y, 6, '#f59e0b', 40, 150, 0.25, 3);
+              if (state.barricadeLevel >= 2 || Math.random() < 0.5) { smearBarricade(e.y - e.radius * 0.3); spawnBlood(barX + 14, e.y - 6, 5, 0.4, 0.7, e.y + e.radius); }
               if (e.typeKey === 'bomber') {
                 state.barricadeHp = Math.max(0, state.barricadeHp - e.barDmg * 1.4);
                 applySplashDamage(e.x, e.y, 85, e.dmg * 0.7, e);
@@ -2203,33 +2404,63 @@ html,body{overscroll-behavior:none}
       }
 
       const GIB_COLORS = ['#7a1f2b', '#a52a3a', '#d26b73', '#e9dcc0', '#4d2b4a', '#6f9a1f'];
-      function spawnGibs(e, n) {
+      // Gib kinds: meat chunks, bone shards, eyeballs, and (with a sprite) the torn-off upper half of the monster.
+      function spawnGibs(e, n, half = null) {
         const ft = Math.floor(state.height * 0.25), fb = Math.floor(state.height * 0.89);
         for (let i = 0; i < n; i++) {
           const a = Math.random() * 6.283, sp = 60 + Math.random() * (e.isBoss ? 320 : 220);
-          state.gibs.push({ x: e.x, gy: Math.max(ft, Math.min(fb, e.y + e.radius * 0.4)), z: e.radius * 0.6 + Math.random() * 10, vz: 120 + Math.random() * 260,
-            vx: Math.cos(a) * sp, vg: Math.sin(a) * sp * 0.25, s: 3 + Math.floor(Math.random() * (e.radius > 20 ? 7 : 4)), c: GIB_COLORS[Math.floor(Math.random() * 6)], landed: false, b: 0 });
+          const roll = Math.random(), k = half ? 'half' : roll < 0.16 ? 'bone' : roll < 0.24 ? 'eye' : 'meat';
+          state.gibs.push({ x: e.x, gy: Math.max(ft, Math.min(fb, e.y + e.radius * 0.4)), z: e.radius * 0.6 + Math.random() * 10, vz: half ? 260 + Math.random() * 120 : 120 + Math.random() * 260,
+            vx: half ? 60 + Math.random() * 120 : Math.cos(a) * sp, vg: Math.sin(a) * sp * (half ? 0.05 : 0.25), s: 3 + Math.floor(Math.random() * (e.radius > 20 ? 7 : 4)), c: GIB_COLORS[Math.floor(Math.random() * 6)],
+            k, sp: half, rot: 0, vr: (Math.random() - 0.5) * (half ? 9 : 0), landed: false, b: 0, life: half ? 26 : 0 });
         }
-        while (state.gibs.length > 140) state.gibs.shift();
+        while (state.gibs.length > 160) state.gibs.shift();
       }
 
       function updateParticlesAndTexts(dt) {
-        for (let i = state.corpses.length - 1; i >= 0; i--) { state.corpses[i].life -= dt; if (state.corpses[i].life <= 0) state.corpses.splice(i, 1); }
-        for (const g of state.gibs) {
+        for (let i = state.corpses.length - 1; i >= 0; i--) {
+          const cp = state.corpses[i];
+          cp.life -= dt;
+          if (cp.spurt > 0) {
+            cp.spurt -= dt;
+            // arterial pumping: rhythmic jets out of the stump
+            if (Math.sin(state.time * 14 + cp.x) > 0.2 && Math.random() < dt * 40 && state.particles.length < 760) {
+              state.particles.push({ x: cp.sx, y: cp.y + cp.r * 0.2, vx: 30 + Math.random() * 90, vy: -170 - Math.random() * 170, life: 1.5, maxLife: 1.5, gravity: 720, floorY: cp.y + cp.r * 0.8 + (Math.random() - 0.5) * 12, blood: true, color: BLOOD_COLS[Math.floor(Math.random() * 5)], size: 2 + Math.random() * 2.5 });
+            }
+          }
+          if (cp.life <= 0) state.corpses.splice(i, 1);
+        }
+        for (const p of state.pools) if (p.radius < p.max) p.radius = Math.min(p.max, p.radius + dt * p.max * 0.45);
+        for (let i = state.pools.length - 1; i >= 0; i--) if (state.pools[i].radius >= state.pools[i].max) { bakeDecal(state.pools[i]); state.pools.splice(i, 1); }
+        for (const bb of state.barBlood) if (bb.len < bb.max) bb.len += dt * 9;
+        for (let i = state.screenBlood.length - 1; i >= 0; i--) { const sb = state.screenBlood[i]; sb.life -= dt; sb.drip += dt * 22; if (sb.life <= 0) state.screenBlood.splice(i, 1); }
+        for (let i = state.gibs.length - 1; i >= 0; i--) {
+          const g = state.gibs[i];
+          if (g.k === 'half' && g.landed) { g.life -= dt; if (g.life <= 0) { state.gibs.splice(i, 1); } continue; }
           if (g.landed) continue;
-          g.vz -= 900 * dt; g.z += g.vz * dt; g.x += g.vx * dt; g.gy += g.vg * dt;
+          g.vz -= 900 * dt; g.z += g.vz * dt; g.x += g.vx * dt; g.gy += g.vg * dt; g.rot += g.vr * dt;
+          if (g.k !== 'bone' && Math.random() < dt * (g.k === 'half' ? 50 : 10) && state.particles.length < 760) state.particles.push({ x: g.x, y: g.gy - g.z, vx: (Math.random() - 0.5) * 30, vy: 0, life: 1, maxLife: 1, gravity: 700, floorY: g.gy, blood: true, color: '#8a0a14', size: 2 });
           if (g.z <= 0) {
-            if (g.b < 1 && Math.abs(g.vz) > 90) { g.b++; g.z = 0; g.vz = -g.vz * 0.35; g.vx *= 0.5; g.vg *= 0.5; }
-            else { g.landed = true; g.z = 0; addDecal(g.x, g.gy, g.c === '#6f9a1f' ? '#3f6a10' : '#5a0e16', 6 + g.s); }
+            if (g.b < 1 && Math.abs(g.vz) > 90) { g.b++; g.z = 0; g.vz = -g.vz * 0.35; g.vx *= 0.5; g.vg *= 0.5; g.vr *= 0.5; }
+            else {
+              g.landed = true; g.z = 0;
+              if (g.k === 'half') { g.rot = (g.rot % 6.283 + 6.283) % 6.283; g.rot = g.rot < 3.14 ? 1.45 : 4.83; addPool(g.x, g.gy + 4, 30); }
+              else addDecal(g.x, g.gy, g.c === '#6f9a1f' ? '#3f6a10' : '#5a0e16', 6 + g.s);
+            }
           }
         }
         for (let i = state.particles.length - 1; i >= 0; i--) {
           const pt = state.particles[i];
           pt.life -= dt;
           if (pt.life <= 0) { state.particles.splice(i, 1); continue; }
+          pt.px = pt.x; pt.py = pt.y;
           pt.x += pt.vx * dt;
           pt.y += pt.vy * dt;
           if (pt.gravity) pt.vy += pt.gravity * dt;
+          if (pt.blood && pt.vy > 0 && pt.y >= pt.floorY) {
+            addDecal(pt.x, pt.floorY, pt.color, pt.size * (1.4 + Math.min(1.6, pt.vy / 400)));
+            state.particles.splice(i, 1);
+          }
         }
         for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
           const ft = state.floatingTexts[i];
@@ -2458,13 +2689,11 @@ html,body{overscroll-behavior:none}
         ctx.fillRect(0, 0, w, h);
 
         drawShipDecor(w, h, floorTop, floorBottom);
-        for (const d of state.decals) {
-          ctx.fillStyle = d.color;
-          for (let i = 0; i < 7; i++) {
-            const a = (d.seed * (i + 1) * 12.9898) % 6.283, rr = d.radius * ((i * 0.37 + d.seed) % 1), sz = 3 + ((i * 7 + d.seed * 5) % 5);
-            ctx.fillRect(d.x + Math.cos(a) * rr - sz / 2, d.y + Math.sin(a) * rr * 0.42 - sz / 2, sz, sz * 0.7);
-          }
-          ctx.fillRect(d.x - d.radius * 0.5, d.y - 2, d.radius, 4);
+        ctx.drawImage(bloodCv, 0, 0, bloodCv.width * PX, bloodCv.height * PX);
+        for (const p of state.pools) {
+          ctx.fillStyle = '#3a040b'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.radius * 0.66, p.radius * 0.29, 0, 0, 6.283); ctx.fill();
+          ctx.fillStyle = '#5a0710'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.radius * 0.6, p.radius * 0.25, 0, 0, 6.283); ctx.fill();
+          ctx.fillStyle = 'rgba(255,90,100,.22)'; ctx.fillRect(p.x - p.radius * 0.3, p.y - p.radius * 0.12, p.radius * 0.3, 2);
         }
 
         for (const pool of state.acidPools) {
@@ -2499,6 +2728,12 @@ html,body{overscroll-behavior:none}
           ctx.moveTo(barX + 10, floorTop + 2);
           ctx.lineTo(barX + 10, floorBottom);
           ctx.stroke();
+          for (const bb of state.barBlood) {
+            const bx = barX + bb.dx;
+            ctx.fillStyle = '#5a0710'; ctx.fillRect(bx - bb.w, bb.y - 4, bb.w * 2 + 2, 7);
+            ctx.fillStyle = '#8a0a14'; ctx.fillRect(bx, bb.y, bb.w, bb.len);
+            ctx.fillStyle = '#c0182a'; ctx.fillRect(bx, bb.y + bb.len - 2, bb.w + 1, 3);
+          }
           ctx.restore();
         } else {
           ctx.fillStyle = 'rgba(127, 29, 29, 0.45)';
@@ -2541,17 +2776,46 @@ html,body{overscroll-behavior:none}
         }
 
         for (const cp of state.corpses) {
-          const ch = cp.sp.height * 0.24;
-          ctx.globalAlpha = Math.min(0.85, cp.life / 3);
-          ctx.fillStyle = '#5a0e16'; ctx.fillRect(Math.round(cp.x - cp.sp.width * 0.62), Math.round(cp.y + cp.r - ch * 0.4), Math.round(cp.sp.width * 1.24), Math.round(ch * 0.9));
-          ctx.drawImage(cp.sp, Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
-          ctx.fillStyle = 'rgba(60,0,10,.55)'; ctx.fillRect(Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
+          const sp = tinted(cp.sp, 'corpse_' + cp.sp.key, 0.35);
+          const ch = cp.sp.height * 0.3, top = cp.torn ? 0.5 : 0;
+          ctx.globalAlpha = Math.min(1, cp.life / 3);
+          // lying remains: (lower half of) the body flattened on the floor, wet gore on the tear line
+          ctx.drawImage(sp, 0, sp.height * top, sp.width, sp.height * (1 - top), Math.round(cp.x - sp.width / 2), Math.round(cp.y + cp.r - ch), sp.width, ch);
+          if (cp.torn) {
+            ctx.fillStyle = '#6e0912'; ctx.fillRect(Math.round(cp.x - sp.width * 0.28), Math.round(cp.y + cp.r - ch - 2), Math.round(sp.width * 0.56), 5);
+            ctx.fillStyle = '#c0182a'; ctx.fillRect(Math.round(cp.x - sp.width * 0.18), Math.round(cp.y + cp.r - ch - 2), Math.round(sp.width * 0.3), 2);
+            ctx.fillStyle = '#e9dcc0'; ctx.fillRect(Math.round(cp.x - 2), Math.round(cp.y + cp.r - ch - 5), 3, 5);
+          }
         }
         ctx.globalAlpha = 1;
         for (const g of state.gibs) {
           const s = g.s, gx = g.x, gy = g.gy - g.z;
+          if (g.k === 'half') {
+            const sp = g.sp, hh = sp.height / 2;
+            ctx.save(); ctx.globalAlpha = Math.min(1, g.life / 3); ctx.translate(gx, gy - (g.landed ? 6 : 0)); ctx.rotate(g.rot);
+            ctx.drawImage(sp, 0, 0, sp.width, hh, -sp.width / 2, -hh, sp.width, hh);
+            ctx.fillStyle = '#6e0912'; ctx.fillRect(-sp.width * 0.3, -3, sp.width * 0.6, 5);
+            ctx.fillStyle = '#c0182a'; ctx.fillRect(-sp.width * 0.2, -3, sp.width * 0.3, 2);
+            ctx.fillStyle = '#e9dcc0'; ctx.fillRect(-2, -1, 3, 6);
+            ctx.restore();
+            continue;
+          }
+          if (g.k === 'bone') {
+            ctx.fillStyle = '#1a050a'; ctx.fillRect(gx - s - 1, gy - 2, s * 2 + 2, 4);
+            ctx.fillStyle = '#e9dcc0'; ctx.fillRect(gx - s, gy - 1, s * 2, 2); ctx.fillRect(gx - s - 1, gy - 2, 2, 4); ctx.fillRect(gx + s - 1, gy - 2, 2, 4);
+            ctx.fillStyle = '#a3121f'; ctx.fillRect(gx + s - 1, gy - 1, 2, 2);
+            continue;
+          }
+          if (g.k === 'eye') {
+            ctx.fillStyle = '#1a050a'; ctx.fillRect(gx - 4, gy - 4, 8, 8);
+            ctx.fillStyle = '#f1e8d8'; ctx.fillRect(gx - 3, gy - 3, 6, 6);
+            ctx.fillStyle = '#c0182a'; ctx.fillRect(gx - 3, gy + 1, 3, 2); ctx.fillRect(gx + 3, gy - 1, 3, 1);
+            ctx.fillStyle = '#ffd21a'; ctx.fillRect(gx - 1, gy - 1, 3, 3); ctx.fillStyle = '#000'; ctx.fillRect(gx, gy, 1, 1);
+            continue;
+          }
           ctx.fillStyle = '#1a050a'; ctx.fillRect(gx - s / 2 - 1, gy - s / 2 - 1, s + 2, s + 2);
           ctx.fillStyle = g.c; ctx.fillRect(gx - s / 2, gy - s / 2, s, s);
+          ctx.fillStyle = '#4a0610'; ctx.fillRect(gx - s / 2, gy + s / 4, s, s / 4);
           ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(gx - s / 2, gy - s / 2, s / 2, s / 3);
         }
         if (state.turretLevel > 0) {
@@ -2650,8 +2914,14 @@ html,body{overscroll-behavior:none}
         }
 
         for (const pt of state.particles) {
-          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
           ctx.fillStyle = pt.color;
+          if (pt.blood) {
+            ctx.globalAlpha = 1;
+            ctx.fillRect(pt.x - pt.size * 0.5, pt.y - pt.size * 0.5, pt.size, pt.size);
+            if (pt.px !== undefined) ctx.fillRect((pt.x + pt.px) / 2 - pt.size * 0.4, (pt.y + pt.py) / 2 - pt.size * 0.4, pt.size * 0.8, pt.size * 0.8);
+            continue;
+          }
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
           ctx.fillRect(pt.x - pt.size * 0.5, pt.y - pt.size * 0.5, pt.size, pt.size);
         }
         ctx.globalAlpha = 1;
@@ -2676,6 +2946,37 @@ html,body{overscroll-behavior:none}
         }
         ctx.globalAlpha = 1;
         ctx.restore();
+        // Lighting: muzzle flash glow, glowing monster eyes, then a heavy vignette.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        if (state.muzzleFlash > 0) {
+          const mx = state.player.x + 30, my = state.player.y - 4, lg = ctx.createRadialGradient(mx, my, 4, mx, my, 150);
+          lg.addColorStop(0, 'rgba(255,190,90,.38)'); lg.addColorStop(1, 'rgba(255,120,40,0)');
+          ctx.fillStyle = lg; ctx.fillRect(mx - 150, my - 150, 300, 300);
+        }
+        for (const e of state.enemies) {
+          const sp = getEnemySprite(e.typeKey, e.animFrame), ey = e.y - sp.height * 0.27, rr = 10 + e.radius * 0.5;
+          const eg = ctx.createRadialGradient(e.x, ey, 1, e.x, ey, rr);
+          eg.addColorStop(0, e.typeKey === 'wraith' ? 'rgba(120,255,255,.35)' : 'rgba(255,40,30,.35)'); eg.addColorStop(1, 'rgba(255,0,0,0)');
+          ctx.fillStyle = eg; ctx.fillRect(e.x - rr, ey - rr, rr * 2, rr * 2);
+        }
+        ctx.restore();
+        const vg = ctx.createRadialGradient(w * 0.45, h * 0.58, Math.min(w, h) * 0.3, w * 0.45, h * 0.58, Math.max(w, h) * 0.72);
+        vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(8,0,4,.62)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+        // Blood splashed onto the visor/screen when the hero takes a hit.
+        for (const sb of state.screenBlood) {
+          ctx.globalAlpha = Math.min(0.85, sb.life / 1.2);
+          ctx.fillStyle = '#6e0912';
+          ctx.beginPath(); ctx.arc(sb.x, sb.y, sb.r * 0.5, 0, 6.283); ctx.fill();
+          for (let i = 0; i < 8; i++) {
+            const a = sb.seed * (i + 1) * 2.399, rr = sb.r * (0.5 + ((i * 0.31 + sb.seed) % 1) * 0.6), sz = 3 + (i % 3) * 3;
+            ctx.fillRect(sb.x + Math.cos(a) * rr - sz / 2, sb.y + Math.sin(a) * rr - sz / 2, sz, sz);
+          }
+          for (let i = 0; i < 3; i++) ctx.fillRect(sb.x - sb.r * 0.3 + i * sb.r * 0.28, sb.y, 3, Math.min(sb.r * 2.4, sb.drip * (0.6 + i * 0.3)));
+          ctx.fillStyle = 'rgba(255,120,130,.35)'; ctx.fillRect(sb.x - sb.r * 0.25, sb.y - sb.r * 0.3, sb.r * 0.25, 3);
+        }
+        ctx.globalAlpha = 1;
         ctx = realCtx;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(buf, 0, 0, buf.width, buf.height, 0, 0, CW, CH);
@@ -2733,8 +3034,11 @@ html,body{overscroll-behavior:none}
 
         const br = 1 + Math.sin(state.time * 5 + enemy.y * 0.07) * 0.035;
         const tw = Math.sin(state.time * 31 + enemy.y) > 0.965 ? 3 : 0;
-        const dh = sprite.height * br, dx = Math.round(enemy.x - sprite.width * 0.5) + tw, dy = Math.round(enemy.y - sprite.height * 0.55 + sprite.height - dh);
-        ctx.drawImage(sprite, dx, dy, sprite.width, dh);
+        const hu = enemy.hurtT > 0 ? enemy.hurtT / 0.12 : 0;
+        const dw = sprite.width * (1 + hu * 0.06), dh = sprite.height * br * (1 - hu * 0.07);
+        const dx = Math.round(enemy.x - dw * 0.5 + hu * 5) + tw, dy = Math.round(enemy.y - sprite.height * 0.55 + sprite.height - dh);
+        ctx.drawImage(sprite, dx, dy, dw, dh);
+        if (enemy.hitFlash > 0) { ctx.globalAlpha = Math.min(1, enemy.hitFlash / 0.08); ctx.drawImage(flashSprite(sprite, sprite.key), dx, dy, dw, dh); ctx.globalAlpha = 1; }
         ctx.globalAlpha = 0.22 + 0.14 * Math.sin(state.time * 7 + enemy.x * 0.1);
         ctx.fillStyle = enemy.typeKey === 'wraith' ? '#7ff' : (enemy.typeKey === 'bomber' ? '#ffb02e' : '#ff3b2e');
         ctx.fillRect(enemy.x - 7, enemy.y - sprite.height * 0.27, 14, 5);
@@ -2743,13 +3047,6 @@ html,body{overscroll-behavior:none}
           ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sprite.width * 0.3, dy + sprite.height * 0.45, 7, 6);
           ctx.fillStyle = '#d02a3a'; ctx.fillRect(dx + sprite.width * 0.3 + 1, dy + sprite.height * 0.45 + 1, 4, 3);
           if (enemy.hp < enemy.maxHp * 0.25) { ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sprite.width * 0.6, dy + sprite.height * 0.3, 6, 7); ctx.fillStyle = '#e8dcc4'; ctx.fillRect(dx + sprite.width * 0.6 + 1, dy + sprite.height * 0.3 + 2, 3, 1); }
-        }
-        if (!state.paused && state.running && Math.random() < state.dt * 1.5 && enemy.x < state.width) addDecal(enemy.x + (Math.random() - 0.5) * 8, enemy.y + enemy.radius, Math.random() < 0.5 ? '#4a0b12' : '#3f6a10', 5);
-        if (enemy.hitFlash > 0) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
-          ctx.beginPath();
-          ctx.arc(enemy.x, enemy.y, enemy.radius * 0.85, 0, Math.PI * 2);
-          ctx.fill();
         }
         if (!enemy.isBoss && enemy.hp < enemy.maxHp) {
           const bw = Math.max(22, enemy.radius * 1.4);
@@ -3175,7 +3472,7 @@ html,body{overscroll-behavior:none}
         const mons = [['wraith', 335, 172, 1], ['stalker', 245, 176, 1], ['kraken', 395, 192, 1], ['lurker', 285, 199, 1.333], ['snail', 435, 205, 1.333], ['cyborg', 190, 206, 1.333]];
         mons.forEach((m, i) => {
           const sp = getEnemySprite(m[0], Math.floor(t * 1.6 + i) % 2), tt = tinted(sp, m[0] + (Math.floor(t * 1.6 + i) % 2), 0.55);
-          const w = tt.width * m[3], h = tt.height * m[3], bob = Math.sin(t * 2 + i) * 1.5;
+          const lg = sp.legacy || 1, w = tt.width * m[3] * lg, h = tt.height * m[3] * lg, bob = Math.sin(t * 2 + i) * 1.5;
           g.fillStyle = 'rgba(70,8,16,.7)'; g.fillRect(m[1] - w * 0.45, m[2] - 3, w * 0.9, 5);
           g.drawImage(tt, Math.round(m[1] - w / 2), Math.round(m[2] - h + bob), w, h);
           g.globalAlpha = 0.45 + 0.3 * Math.sin(t * 6 + i * 2); g.fillStyle = '#ff2a2a'; g.fillRect(m[1] - 6, m[2] - h * 0.78 + bob, 12, 3); g.globalAlpha = 1;
