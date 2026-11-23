@@ -813,6 +813,31 @@ canvas#gameCanvas{cursor:crosshair}
 @media (max-height:500px){#title-art{height:18vh !important} .hero-title{font-size:18px} .hero-card{padding:12px 14px} .hbtn{min-height:36px;padding:7px 10px 7px 26px} .hbtn.primary{min-height:42px} .menu-stack{grid-template-columns:1fr 1fr 1fr} #story-line{top:calc(22% + 26px);font-size:9.5px} #bottom-bar{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 112px)} .hero-sub{margin-bottom:4px}}
 @media (prefers-reduced-motion:reduce){.glitch-title,.hbtn:hover,.noir-scanlines{animation:none}}
 </style>
+<style id="v10-touch">
+/* ===== v10: egyszerűbb, nagyobb gombok – jobbra csak a TŰZ, a szörnyek látszanak ===== */
+#left-action-pad{position:absolute;left:max(8px,env(safe-area-inset-left));top:28%;display:flex;flex-direction:column;gap:8px;pointer-events:auto;zoom:var(--ui,1);z-index:12}
+#left-action-pad .pad-btn{width:64px;height:54px;min-height:0;padding:2px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line;line-height:1.15;font-size:10px;letter-spacing:0;opacity:.88;touch-action:none;-webkit-tap-highlight-color:transparent}
+#left-action-pad .pad-btn.active{background:#1f6b5a;color:#eafff6}
+#left-action-pad .pad-btn.ready{opacity:1}
+#right-action-pad{right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));gap:0}
+#right-action-pad #btn-fire{width:112px;height:112px;font-size:18px;opacity:.82;touch-action:none;-webkit-tap-highlight-color:transparent}
+#right-action-pad #btn-fire.firing,#right-action-pad #btn-fire:active{opacity:1}
+#joy-base{left:max(84px,env(safe-area-inset-left))}
+@media (hover:none),(pointer:coarse),(max-width:899px){
+  #bottom-bar{left:max(190px,env(safe-area-inset-left));right:auto;transform:none;bottom:max(6px,env(safe-area-inset-bottom))}
+  #weapon-strip{max-width:calc(100vw - 190px - 140px);opacity:.82}
+  #combo-box{right:auto;left:84px;top:30%;text-align:left;transform-origin:left center}
+  .combo-track{margin:4px 0 0 0}
+}
+@media (max-height:430px) and (orientation:landscape){
+  #left-action-pad{top:24%;gap:6px}
+  #left-action-pad .pad-btn{width:58px;height:46px;font-size:9px}
+  #right-action-pad #btn-fire{width:96px;height:96px}
+  #bottom-bar{left:max(170px,env(safe-area-inset-left))}
+  #weapon-strip{max-width:calc(100vw - 170px - 120px)}
+}
+@media (hover:hover) and (pointer:fine) and (min-width:900px){#left-action-pad{display:none}}
+</style>
 </head>
 <body>
   <div id="game-root">
@@ -911,15 +936,18 @@ canvas#gameCanvas{cursor:crosshair}
         </div>
       </div>
 
+      <div id="left-action-pad">
+        <button class="pad-btn" id="btn-autofire" type="button">🎯
+AUTO KI</button>
+        <button class="pad-btn" id="btn-switch-weap" type="button">🔄
+FEGYVER</button>
+        <button class="pad-btn" id="btn-grenade" type="button">💣
+GRÁNÁT</button>
+        <button class="pad-btn" id="btn-adren" type="button">⚡
+0%</button>
+      </div>
+
       <div id="right-action-pad">
-        <div class="action-sub-col">
-          <button class="pad-btn" id="btn-autofire" type="button">🎯 AUTO: KI</button>
-          <button class="pad-btn" id="btn-switch-weap" type="button">🔄 FEGYVER</button>
-        </div>
-        <div class="action-sub-col">
-          <button class="pad-btn" id="btn-grenade" type="button">💣 GRÁNÁT</button>
-          <button class="pad-btn" id="btn-adren" type="button">⚡ 0%</button>
-        </div>
         <button id="btn-fire" type="button">TŰZ</button>
       </div>
     </div>
@@ -1995,6 +2023,7 @@ canvas#gameCanvas{cursor:crosshair}
       const bctx = buf.getContext('2d');
       let PX = 3, CW = 1280, CH = 720, Z = 1;
       let uiScale = 1;
+      let lowQ = false, lagTicks = 0; // v10: automatikus minőségcsökkentés lag esetén
       try { const sv = parseFloat(localStorage.getItem('c1k_ui')); uiScale = sv > 0 ? sv : (window.matchMedia('(hover:hover) and (pointer:fine)').matches ? 0.7 : 1); } catch (_) {}
       function applyUi() { document.getElementById('game-root').style.setProperty('--ui', uiScale); }
 
@@ -2115,7 +2144,7 @@ canvas#gameCanvas{cursor:crosshair}
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.imageSmoothingEnabled = false;
         // v8: fix 2-es pixelrács – a hős sprite 1:1-ben látszik (a korábbi 3-4x lekicsinyítés elnyelte a részleteket)
-        PX = state.height >= 300 ? 2 : 1;
+        PX = lowQ ? 3 : (state.height >= 300 ? 2 : 1);
         buf.width = Math.ceil(state.width / PX);
         buf.height = Math.ceil(state.height / PX);
         bctx.imageSmoothingEnabled = false;
@@ -2367,7 +2396,7 @@ canvas#gameCanvas{cursor:crosshair}
       }
 
       function spawnParticles(x, y, count, color, speedMin = 40, speedMax = 210, life = 0.35, size = 3, opts = null) {
-        if (state.particles.length > 520) return;
+        if (state.particles.length > (lowQ ? 220 : 520)) return;
         for (let i = 0; i < count; i++) {
           const ang = Math.random() * Math.PI * 2;
           const spd = speedMin + Math.random() * (speedMax - speedMin);
@@ -4027,11 +4056,11 @@ canvas#gameCanvas{cursor:crosshair}
         }
         const gReady = state.grenadeCd <= 0;
         setTxt('grenade-txt', gReady ? 'KÉSZ' : `${Math.ceil(state.grenadeCd)}s`);
-        setTxt('btn-grenade', gReady ? '💣 GRÁNÁT' : `💣 ${Math.ceil(state.grenadeCd)}s`);
+        setTxt('btn-grenade', gReady ? '💣\nGRÁNÁT' : `💣\n${Math.ceil(state.grenadeCd)}s`);
         setCls('pill-grenade', 'ready', gReady && state.running); setCls('btn-grenade', 'ready', gReady && state.running);
         const aReady = state.adren >= 100 && state.adrenTime <= 0;
         setTxt('adren-txt', state.adrenTime > 0 ? 'AKTÍV' : `${Math.floor(state.adren)}%`);
-        setTxt('btn-adren', state.adrenTime > 0 ? '⚡ AKTÍV' : (aReady ? '⚡ ADRENALIN' : `⚡ ${Math.floor(state.adren)}%`));
+        setTxt('btn-adren', state.adrenTime > 0 ? '⚡\nAKTÍV' : (aReady ? '⚡\nADREN.' : `⚡\n${Math.floor(state.adren)}%`));
         setW('adren-fill', state.adrenTime > 0 ? (state.adrenTime / 8) * 100 : state.adren);
         setCls('pill-adren', 'ready', aReady); setCls('btn-adren', 'ready', aReady);
         const sig = state.unlockedWeapons.join(',') + '|' + state.currentWeaponId;
@@ -4385,7 +4414,7 @@ canvas#gameCanvas{cursor:crosshair}
       document.getElementById('btn-switch-weap').addEventListener('click', () => cycleWeapon(1));
 
       const autoBtn = document.getElementById('btn-autofire');
-      function syncAutoBtn() { autoBtn.textContent = state.autoFire ? '🎯 AUTO: BE' : '🎯 AUTO: KI'; autoBtn.classList.toggle('active', state.autoFire); }
+      function syncAutoBtn() { autoBtn.textContent = state.autoFire ? '🎯\nAUTO BE' : '🎯\nAUTO KI'; autoBtn.classList.toggle('active', state.autoFire); }
       function toggleAuto() { state.autoFire = !state.autoFire; syncAutoBtn(); }
       autoBtn.addEventListener('click', toggleAuto);
       for (const id of ['btn-grenade', 'pill-grenade']) { const b = document.getElementById(id); if (b) b.addEventListener('pointerdown', e => { e.preventDefault(); throwGrenade(); }); }
@@ -4648,6 +4677,10 @@ canvas#gameCanvas{cursor:crosshair}
         fpsFrames++;
         if (fpsAccum >= 0.5) {
           state.fps = Math.round(fpsFrames / fpsAccum);
+          if (!lowQ && state.running && !state.paused && !document.hidden) {
+            lagTicks = state.fps < 38 ? lagTicks + 1 : Math.max(0, lagTicks - 1);
+            if (lagTicks >= 6) { lowQ = true; resizeCanvas(); }
+          }
           fpsAccum = 0;
           fpsFrames = 0;
         }
