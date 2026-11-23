@@ -42,6 +42,18 @@
   - `ESC`: taktika / bolt menü
 - **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
+## Késői napok (v14)
+
+| Nap | Új szörny | Különlegesség |
+|---|---|---|
+| 7+ | **Pókanya** | Cikcakkban oldalaz, nehéz eltalálni |
+| 8+ | **Bőrtelen Kopó** | Nagyon gyors, mindig 3–6-os falkában jön |
+| 10+ | **Puffadt Hulla** | Szívós; szétdurranva savat fröcsköl és rongálja a barikádot |
+| 12+ | **Sziámi Iker** | Halálakor két Kúszóra válik szét |
+| 15+ | **Hústorony** | Óriás; 4,5 mp-enként gyógyítja a közeli szörnyeket – őt öld meg először! |
+
+A 8. naptól nagyobb hordák jönnek (egyszerre akár 200 szörny), és minden 3. nem-főellenséges napon (9., 12., 18., 21. …) **HORDA-ÉJSZAKA**: 40 + 4×nap szörny tör rá a barikádra.
+
 ## Sebességmérő és hibakereső (v13)
 
 - Alul középen (asztalon jobb alsó sarokban) a **sebességmérő**: `FPS · képkocka-idő`. Zöld ≥ 50, sárga ≥ 30, piros < 30 FPS. Kikapcsolható: Beállítások → Sebességmérő.
