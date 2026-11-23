@@ -25,7 +25,7 @@ The current version is the owner's **accepted baseline**. You may change it **on
 8. If unsure whether something is an improvement or a change of direction – **leave it as is and ask the owner.**
 
 ## Feature checklist (must remain)
-- 16 weapons (shotgun … singularity, incl. flamethrower, minigun, rocket launcher, bio cannon, nail gun, saw launcher, chain tesla, napalm mortar) with per-weapon **fire-rate and damage upgrades** (Armory / Fegyvertár), per-weapon projectile kinds and status effects (burn/slow/stun/acid/knockback), visible gun model in the hero's hands
+- 16+ weapons (shotgun … singularity, incl. flamethrower, minigun, rocket launcher, bio cannon, nail gun, saw launcher, chain tesla, napalm mortar) with per-weapon **fire-rate and damage upgrades** (Armory / Fegyvertár), per-weapon projectile kinds and status effects (burn/slow/stun/acid/knockback), visible gun model in the hero's hands
 - **Autonomous machine-gun turret** (4 upgrade levels) in the Barricade & Systems tab
 - Armor tiers, barricade upgrades/repair, cooling, magnet upgrades, heat system
 - 10 enemy types + Leviathan boss, gibs/blood/slime effects, shaded wet-look monster sprites (finishSprite), corpses, glowing eyes, breathing/twitch, wounds
@@ -43,6 +43,8 @@ The current version is the owner's **accepted baseline**. You may change it **on
 - v13 **built-in debugger** (📊 / F3 / tap the FPS meter) with error codes E100–E600 / W700–W703, copyable report, stress test (+100 monsters), quality AUTO/HIGH/LOW; **FPS meter** (setting); **blood drying** speed setting (GYORS/NORMÁL/LASSÚ); compact one-row HUD on short screens, raised floor (bigger play area)
 - v14 late-game: 5 extra monster types – Bőrtelen Kopó (hound, packs, day 8+), Pókanya (spider, zig-zag, day 7+), Puffadt Hulla (bloat, acid burst on death, day 10+), Sziámi Iker (twin, splits in two, day 12+), Hústorony (tower, heals nearby monsters, day 15+); higher spawn ceiling from day 8 (up to 200), bigger packs, **HORDA-ÉJSZAKA** every 3rd non-boss day from day 9 (40 + 4×day monsters)
 - v15 mobile GPU: sprite chunks computed on CPU in finishSprite (no getImageData on GPU canvases in-game), sprites/silhouettes prewarmed in the menu, HUD bars use transform (no layout), target-time 60 FPS limiter (90 Hz safe), faster auto-low-quality (hides CSS scanlines), version + display Hz in debugger/report
+
+- v16 arsenal: **26 weapons** (10 new cinematic ones: revolver, auto_shotgun, dragon_breath, laser_gatling, harpoon, quad_rocket (homing), ion_storm, cluster_mortar, sun_lance (wide beam), antimatter), `WEAPON_CINE` flash/ring/sparks on heavy weapons, 4 upgrade branches per weapon (`UP_DEFS`: rate 10, damage 10, cooling 5, crit 5, ⭐ MASTER +15%), **8 armor tiers** (4 new, hero sprite per tier), **armor modules** (`ARMOR_MODS`: plating, shield capacitor, shield regen, servos), uniform pictogram icon buttons (`.ico-btn`, `.ico-pad`, `.up-btn`), pictogram HUD labels, **version number** shown in main menu, pause menu and in-game corner (`#ver-tag`, from `GAME_VERSION`)
 
 ## Ideas that fit the direction (welcome)
 Better hero sprite, redrawn barricade, boss animations, more monster hybrids, story screens between waves, custom icon, save/high-score, more gore polish, performance tuning.
