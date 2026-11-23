@@ -42,6 +42,16 @@
   - `ESC`: taktika / bolt menü
 - **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
+## Fegyverek, páncélok, fejlesztések (v16)
+
+- **26 fegyver** – 10 új, filmes fegyver: Kézi Ágyú Revolver, Dobtáras Harci Sörétes, Sárkánylehelet Sörétes (gyújtósörét), Vöröslézer Gatling, Bálnavadász Szigonyágyú (láncos szigony, 6 átütés), Négycsövű Rakétaraj (4 önirányító rakéta), Ionvihar Projektor (10-es villámlánc), Kazettás Pokolakna (6 kisbomba), Nap-Lándzsa Orbitális Lézer (széles aranysugár), Antianyag Megsemmisítő (óriás vonzó gömb).
+- **🎬 Filmes lövések**: a nehézfegyverek fényvillanással, lökéshullám-gyűrűvel és szikrazáporral lőnek (a villanás a Képernyőrázás beállítással kapcsol ki).
+- **Fegyverfejlesztés fegyverenként 4 ágon**: ⚡ tűzgyorsaság 10 szint, 💥 sebzés 10 szint, ❄️ hűtés 5 szint, 🎯 kritikus 5 szint. Ha mind maxon van: **⭐ MESTER** (+15% sebzés).
+- **8 páncélszint** (új: Bastion, Spectre, Juggernaut, Leviatán-Csontpáncél), mind saját hős-kinézettel.
+- **Páncélmodulok**: 🧱 Páncéllemez, 🔋 Pajzskondenzátor, ♻️ Pajzs-regenerátor (10–10 szint), 🦿 Szervómotorok (5 szint).
+- **Egységes ikongombok**: minden gomb piktogram, azonos méretű, nagy érintési felülettel; a HUD feliratai ikonok lettek, így kisebb helyet foglal.
+- **Verziószám**: a főmenüben, a szünet-menüben és játék közben a sarokban (pl. `v16`).
+
 ## Késői napok (v14)
 
 | Nap | Új szörny | Különlegesség |
