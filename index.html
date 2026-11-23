@@ -983,6 +983,7 @@ canvas#gameCanvas{cursor:crosshair}
             <button class="hbtn" data-view="mv-controls" type="button">🎮 IRÁNYÍTÁS</button>
             <button class="hbtn" data-view="mv-settings" type="button">⚙ BEÁLLÍTÁSOK</button>
             <button class="hbtn" id="btn-refresh3" type="button">⟳ FRISSÍTÉS</button>
+            <button class="hbtn" id="btn-install" type="button" style="display:none">📲 TELEPÍTÉS</button>
           </div>
           <div class="record-line" id="record-line"></div>
         </div>
@@ -1054,9 +1055,30 @@ canvas#gameCanvas{cursor:crosshair}
     (function () {
       'use strict';
 
+      // v9: automatikus frissítés – indításkor, visszatéréskor és 20 percenként keres új verziót.
+      // Ha játék közben érkezik frissítés, a következő menünél / új bevetésnél tölt újra (nem szakítja meg a menetet).
+      let pendingUpdate = false;
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        const hadController = Boolean(navigator.serviceWorker.controller);
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+          const check = () => reg.update().catch(() => {});
+          setInterval(check, 20 * 60 * 1000);
+          document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+          window.addEventListener('online', check);
+        }).catch(() => {});
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!hadController || pendingUpdate) return;
+          pendingUpdate = true;
+          if (!state.running && !state.devouring) location.reload();
+          else showWaveBanner('⟳ ÚJ VERZIÓ – A KÖVETKEZŐ MENÜNÉL FRISSÜL');
+        });
       }
+      let installPrompt = null;
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault(); installPrompt = e;
+        const b = document.getElementById('btn-install'); if (b) b.style.display = '';
+      });
+      window.addEventListener('appinstalled', () => { const b = document.getElementById('btn-install'); if (b) b.style.display = 'none'; });
 
       const WEAPONS = [
         {
@@ -2118,6 +2140,7 @@ canvas#gameCanvas{cursor:crosshair}
       }
 
       function resetGame() {
+        if (pendingUpdate) { location.reload(); return; }
         resizeCanvas();
         const armor = ARMOR_TIERS[0];
         state.running = true;
@@ -4407,6 +4430,7 @@ canvas#gameCanvas{cursor:crosshair}
         applyUi(); resizeCanvas(); refreshSettingsPanels();
       }
       function goMainMenu() {
+        if (pendingUpdate) { location.reload(); return; }
         state.running = false; state.paused = false; state.devouring = false;
         releaseAllFire();
         for (const id of ['pause-screen', 'gameover-screen', 'menu-modal']) document.getElementById(id).classList.remove('active');
@@ -4422,6 +4446,12 @@ canvas#gameCanvas{cursor:crosshair}
       document.getElementById('btn-refresh').addEventListener('click', hardRefresh);
       document.getElementById('btn-refresh2').addEventListener('click', hardRefresh);
       document.getElementById('btn-refresh3').addEventListener('click', hardRefresh);
+      document.getElementById('btn-install').addEventListener('click', async () => {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        try { await installPrompt.userChoice; } catch (_) {}
+        installPrompt = null; document.getElementById('btn-install').style.display = 'none';
+      });
       document.getElementById('btn-ui-minus').addEventListener('click', () => setUi(uiScale - 0.1));
       document.getElementById('btn-ui-plus').addEventListener('click', () => setUi(uiScale + 0.1));
       document.getElementById('btn-restart2').addEventListener('click', () => { pauseScreen.classList.remove('active'); resetGame(); });
