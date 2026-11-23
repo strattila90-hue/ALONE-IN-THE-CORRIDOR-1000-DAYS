@@ -4,6 +4,16 @@
 
 16-bites retro sci-fi **Tech-Noir Survival Horror** akció-túlélőjáték HTML5 Canvas és Vanilla JavaScript alapokon — mobil-első (landscape) kialakítással, offline PWA támogatással és PWABuilder APK-kompatibilitással.
 
+## 📲 Android APK letöltése
+
+**[⬇ corridor-1000d.apk letöltése](https://github.com/strattila90-hue/ALONE-IN-THE-CORRIDOR-1000-DAYS/raw/main/download/corridor-1000d.apk)**
+
+1. Nyisd meg a fenti linket a telefonon, töltsd le az APK-t.
+2. Koppints rá, és engedélyezd a „telepítés ismeretlen forrásból” opciót a böngésződnek / fájlkezelődnek.
+3. Telepítés után a **Corridor 1000D** ikonnal indul, fekvő teljes képernyőn, internet nélkül is.
+
+**Automatikus frissítés:** az app minden induláskor letölti a legújabb játékverziót ebből a repóból (`main` ág). Ha a főmenüben vagy, azonnal frissül, különben a következő indításkor. Új APK-t csak akkor kell telepíteni, ha maga az Android-burkoló változik (`android-wrapper/`).
+
 ## Mit tartalmaz a repó?
 
 - `index.html` — A teljes, önállóan futtatható játék (2D pixel-art sprite motor, Web Audio API szintetizátor, érintőképernyős és billentyűzetes irányítás).
@@ -11,6 +21,8 @@
 - `sw.js` — Service Worker az offline gyorsítótárazáshoz.
 - `icon.svg` — Vektoros alkalmazásikon a kezdőképernyőhöz és APK csomagoláshoz.
 - `README.md` — Telepítési és élesítési leírás.
+- `download/corridor-1000d.apk` — Kész, aláírt Android telepítő.
+- `android-wrapper/` — Az APK forrása (WebView-burkoló automatikus frissítéssel) és `build.sh`.
 
 ## Irányítás
 
