@@ -19,11 +19,16 @@
   - Jobb alsó `TŰZ` gomb: tüzelés balról jobbra.
   - `🎯 AUTO` gomb: folyamatos automata tüzelés be-/kikapcsolása.
   - `🔄 FEGYVER` gomb: gyors váltás a feloldott fegyverek között.
+  - Lebegő joystick: ahol a bal oldalon hozzáérsz, ott jelenik meg.
+  - A képernyő jobb oldalán bárhol nyomva tartva is tüzelsz (az ujjad felé célozva).
+  - `💣 GRÁNÁT`, `⚡ ADRENALIN`, fegyversáv a közvetlen fegyverválasztáshoz.
 - **Asztali gép / Billentyűzet:**
   - `W A S D` vagy `Nyilak`: mozgás
-  - `Szóköz`: tüzelés
-  - `Q`: fegyverváltás
-  - `ESC`: taktika / bolt menü bezárása
+  - `Szóköz` / bal egér: tüzelés (egérrel célzás)
+  - `Q`, egérgörgő, `1–9`, `0`: fegyverváltás
+  - `G` / jobb egér: gránát • `F`: adrenalin • `E`: auto-tűz • `P`: szünet
+  - `ESC`: taktika / bolt menü
+- **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
 ## Élesítés (GitHub Pages / Vercel) és Android APK
 
