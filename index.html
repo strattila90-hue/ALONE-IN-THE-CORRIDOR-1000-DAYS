@@ -841,6 +841,52 @@ canvas#gameCanvas{cursor:crosshair}
 }
 @media (hover:hover) and (pointer:fine) and (min-width:900px){#left-action-pad{display:none}}
 </style>
+<style id="v13-perf-debug">
+/* ===== v13: sebességmérő, hibakereső, tisztább gombok, kompaktabb HUD (nagyobb játéktér) ===== */
+#fps-meter{position:absolute;left:50%;transform:translateX(-50%);bottom:max(4px,env(safe-area-inset-bottom));z-index:16;font:900 10px "Courier New",monospace;letter-spacing:.06em;padding:2px 7px;background:rgba(8,4,3,.82);border:2px solid #000;box-shadow:inset 0 0 0 1px #5a4636;color:#86efac;cursor:pointer;pointer-events:auto;white-space:nowrap;text-shadow:1px 1px 0 #000}
+#fps-meter.mid{color:#fbbf24}#fps-meter.bad{color:#ff5a66;box-shadow:inset 0 0 0 1px #c4222f}
+#err-toast{position:absolute;left:50%;top:calc(max(8px,env(safe-area-inset-top)) + 56px);transform:translateX(-50%);z-index:30;display:none;max-width:90vw;padding:8px 12px;font:900 11px "Courier New",monospace;color:#fff;background:#7a1018;border:3px solid #000;box-shadow:inset 0 0 0 2px #ff5a66,0 4px 0 #000;cursor:pointer;pointer-events:auto}
+#err-toast.show{display:block}
+#diag-box{top:auto;bottom:calc(max(4px,env(safe-area-inset-bottom)) + 26px);right:auto;left:50%;transform:translateX(-50%);width:min(430px,94vw);max-height:min(78vh,520px);overflow-y:auto;pointer-events:auto;z-index:29;font:700 10.5px/1.5 "Courier New",monospace;color:#e8dcc4;background:rgba(14,9,7,.96);border:3px solid #000;box-shadow:inset 0 0 0 2px #5a4636,0 6px 0 #000;padding:8px 10px}
+#diag-box .dg-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#7fe3c2;letter-spacing:.12em;margin-bottom:4px}
+#diag-box .dg-x{width:34px;height:30px;border:2px solid #000;background:#5e0d15;color:#fff;font:900 14px monospace;cursor:pointer}
+#dg-stats b.g{color:#86efac}#dg-stats b.y{color:#fbbf24}#dg-stats b.r{color:#ff5a66}
+#diag-box .dg-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+#diag-box .dg-btns button{min-height:36px;border:2px solid #000;background:#3a2d22;color:#f0e2c4;font:900 10px "Courier New",monospace;letter-spacing:.04em;cursor:pointer;box-shadow:inset 2px 2px 0 #9b7f5c,inset -2px -2px 0 #1a120c}
+#diag-box .dg-btns button:active{transform:translateY(2px)}
+#diag-box .dg-sub{font-size:9px;color:#a39580;letter-spacing:.1em;margin-top:2px}
+#dg-log{margin:4px 0;max-height:150px;overflow-y:auto}
+.dg-row{padding:4px 6px;margin:3px 0;border-left:4px solid #e0a02f;background:rgba(0,0,0,.35);font-size:10px}
+.dg-row.err{border-color:#ff3344}.dg-row.ok{border-color:#86efac;color:#86efac}.dg-row b{color:#fff}
+.dg-row i{color:#cbbd9f;word-break:break-word}
+#diag-box details{margin-top:6px;font-size:10px}#diag-box summary{cursor:pointer;color:#e0a02f}
+#dg-codes div{padding:1px 0}#dg-codes b{display:inline-block;min-width:42px;color:#7fe3c2}
+/* egyértelműbb érintőgombok: nagy ikon, színkódolt keret, állapotfelirat */
+#left-action-pad .pad-btn{opacity:.95;font-size:10.5px;font-weight:900;border-left:6px solid #7a6a55}
+#btn-autofire{border-left-color:#5a6a60 !important}
+#btn-autofire.active{border-left-color:#7fe3c2 !important;background:#1f6b5a !important}
+#btn-switch-weap{border-left-color:#e0a02f !important}
+#btn-grenade{border-left-color:#c4222f !important}
+#btn-adren{border-left-color:#fbbf24 !important}
+#touch-hint{position:absolute;left:0;right:0;top:46%;display:flex;justify-content:space-between;padding:0 max(90px,10vw);z-index:9;pointer-events:none;opacity:0;transition:opacity .6s;font:900 12px "Courier New",monospace;letter-spacing:.14em;color:#f0e2c4;text-shadow:2px 2px 0 #000}
+#touch-hint span{background:rgba(10,6,4,.7);border:2px solid #000;padding:6px 10px;box-shadow:inset 0 0 0 1px #5a4636}
+#touch-hint .r{color:#ff8a8a}
+#touch-hint.show{opacity:.92}
+@media (hover:hover) and (pointer:fine) and (min-width:900px){#touch-hint{display:none}#fps-meter{left:auto;right:12px;transform:none;bottom:12px}#diag-box{left:auto;right:12px;transform:none;bottom:40px}}
+/* kompakt HUD alacsony (fekvő telefon) kijelzőn: egy sor, több hely a harcnak */
+@media (max-height:500px){
+  #hud-top{top:max(4px,env(safe-area-inset-top));gap:4px}
+  .hud-group{flex-wrap:nowrap;gap:4px}
+  .hud-panel{padding:2px 6px;min-width:0}
+  .hud-label{font-size:7px;letter-spacing:.04em}
+  .hud-value{font-size:10px;line-height:1.15}
+  .bar-track{width:64px;height:5px;margin-top:1px;border-width:1px}
+  .tactile-btn{min-height:28px;padding:3px 7px;font-size:10px}
+  #boss-hud{top:calc(max(4px,env(safe-area-inset-top)) + 34px)}
+  #err-toast{top:calc(max(4px,env(safe-area-inset-top)) + 38px)}
+}
+@media (max-height:500px) and (max-width:820px){.bar-track{width:50px}.hud-value{font-size:9px}}
+</style>
 </head>
 <body>
   <div id="game-root">
@@ -922,7 +968,21 @@ canvas#gameCanvas{cursor:crosshair}
     <div id="wave-banner">HULLÁM 1</div>
     <div id="story-line"></div>
     <div id="combo-box"><div id="combo-count">x0</div><div id="combo-name">MÉSZÁRLÁS</div><div class="combo-track"><div id="combo-fill"></div></div></div>
-    <div id="diag-box"></div>
+    <div id="fps-meter" title="Sebességmérő – koppints a hibakeresőért (F3)">-- FPS</div>
+    <div id="err-toast"></div>
+    <div id="diag-box">
+      <div class="dg-head"><span>🛠 HIBAKERESŐ</span><button class="dg-x" id="dg-close" type="button" aria-label="Bezárás">✕</button></div>
+      <div id="dg-stats"></div>
+      <div class="dg-btns">
+        <button type="button" id="dg-stress">☣ +100 SZÖRNY</button>
+        <button type="button" id="dg-quality">MINŐSÉG: AUTO</button>
+        <button type="button" id="dg-copy">📋 MÁSOLÁS</button>
+        <button type="button" id="dg-clear">🗑 TÖRLÉS</button>
+      </div>
+      <div class="dg-sub">NAPLÓ (E = hiba, W = figyelmeztetés)</div>
+      <div id="dg-log"></div>
+      <details><summary>HIBAKÓDOK JELENTÉSE</summary><div id="dg-codes"></div></details>
+    </div>
 
     <div id="bottom-bar">
       <div id="weapon-strip"></div>
@@ -932,6 +992,7 @@ canvas#gameCanvas{cursor:crosshair}
       </div>
     </div>
 
+    <div id="touch-hint"><span>◀ BAL OLDAL: MOZGÁS</span><span class="r">JOBB OLDAL: TŰZ ▶</span></div>
     <div id="touch-controls">
       <div id="joy-zone">
         <div id="joy-base">
@@ -1086,6 +1147,60 @@ GRÁNÁT</button>
     (function () {
       'use strict';
 
+      // ===================== v13: BEÉPÍTETT HIBAKERESŐ (hibakódokkal) + SEBESSÉGMÉRŐ =====================
+      const Dbg = {
+        codes: {
+          E100: 'JavaScript-hiba a játékban',
+          E101: 'Kezeletlen aszinkron (Promise) hiba',
+          E200: 'Játéklogika hiba (update)',
+          E201: 'Kirajzolási hiba (render)',
+          E300: 'Hangmotor nem indult (Web Audio)',
+          E400: 'Mentés sikertelen (localStorage tele / tiltva)',
+          E500: 'Frissítés / Service Worker hiba',
+          E600: 'Grafikus vászon elveszett (GPU reset)',
+          W700: 'Alacsony FPS (30 alatt, 3 mp-ig)',
+          W701: 'Akadás: hosszú képkocka (120 ms felett)',
+          W702: 'Automatikus minőségcsökkentés bekapcsolt',
+          W703: 'Effekt-limit elérve (részecskék ritkítva)'
+        },
+        log: [], fps: 0, fpsMin: 0, ms: 0, tU: 0, tR: 0, lowS: 0, open: false,
+        report(code, msg) {
+          msg = String(msg || '').slice(0, 160);
+          const key = code + '|' + msg;
+          let it = this.log.find(x => x.key === key);
+          const t = new Date().toLocaleTimeString('hu-HU');
+          if (it) { it.n++; it.t = t; if (code[0] !== 'E') { if (this.open) this.renderLog(); return; } }
+          else {
+            it = { key, code, msg, n: 1, t };
+            this.log.unshift(it); if (this.log.length > 30) this.log.pop();
+            if (code[0] === 'E') this.toast(code);
+          }
+          try { localStorage.setItem('c1k_errlog', JSON.stringify(this.log.slice(0, 30))); } catch (_) {}
+          if (this.open) this.renderLog();
+          if (code[0] === 'E') try { console.error('[' + code + ']', msg); } catch (_) {}
+        },
+        toast(code) {
+          const el = document.getElementById('err-toast'); if (!el) return;
+          el.textContent = '⚠ ' + code + ' – ' + (this.codes[code] || 'Hiba') + ' (koppints: részletek)';
+          el.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('show'), 5000);
+        },
+        renderLog() {
+          const el = document.getElementById('dg-log'); if (!el) return;
+          el.innerHTML = this.log.length ? this.log.map(x => `<div class="dg-row ${x.code[0] === 'E' ? 'err' : 'warn'}"><b>${x.code}</b> ${x.t}${x.n > 1 ? ' ×' + x.n : ''}<br/>${this.codes[x.code] || ''}${x.msg ? ': <i>' + x.msg.replace(/[<>&]/g, '') + '</i>' : ''}</div>`).join('') : '<div class="dg-row ok">✔ Nincs hiba. A játék rendben fut.</div>';
+        },
+        where(err) {
+          const m = (err && err.message) || String(err);
+          const f = ((err && err.stack) || '').split('\n').map(l => l.match(/at (\S+) .*:(\d+):\d+\)?$/) || l.match(/^(\w*)@.*:(\d+):\d+$/)).find(Boolean);
+          return f ? `${m} [${f[1] || '?'}:${f[2]}]` : m;
+        },
+        text() {
+          return 'CORRIDOR-1000D hibajelentés\n' + navigator.userAgent + '\n' + `FPS ${this.fps} (min ${this.fpsMin}) képkocka ${this.ms.toFixed(1)} ms\n` + this.log.map(x => `${x.code} ×${x.n} ${x.t} ${this.codes[x.code] || ''} ${x.msg}`).join('\n');
+        }
+      };
+      try { const old = JSON.parse(localStorage.getItem('c1k_errlog') || '[]'); if (Array.isArray(old)) Dbg.log = old.slice(0, 30); } catch (_) {}
+      window.addEventListener('error', e => { if (e && e.message) Dbg.report('E100', e.message + (e.lineno ? ' @' + e.lineno : '')); });
+      window.addEventListener('unhandledrejection', e => Dbg.report('E101', e && e.reason && (e.reason.message || e.reason)));
+
       // v9: automatikus frissítés – indításkor, visszatéréskor és 20 percenként keres új verziót.
       // Ha játék közben érkezik frissítés, a következő menünél / új bevetésnél tölt újra (nem szakítja meg a menetet).
       let pendingUpdate = false;
@@ -1096,7 +1211,7 @@ GRÁNÁT</button>
           setInterval(check, 20 * 60 * 1000);
           document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
           window.addEventListener('online', check);
-        }).catch(() => {});
+        }).catch(err => { if (/^https?:/.test(location.protocol)) Dbg.report('E500', err && err.message); });
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (!hadController || pendingUpdate) return;
           pendingUpdate = true;
@@ -1333,6 +1448,9 @@ GRÁNÁT</button>
         muted: false,
         droneTimer: 0,
         beatStep: 0,
+        vWin: 0, vCnt: 0, noiseCache: {},
+        // v13: hang-költségvetés – 60 ms-onként max. 10 új hang, így tömeges találatnál sem fullad be az audió-szál
+        voiceOk() { const n = this.ctx.currentTime; if (n - this.vWin > 0.06) { this.vWin = n; this.vCnt = 0; } return ++this.vCnt <= 10; },
 
         init() {
           if (this.ctx) {
@@ -1341,7 +1459,7 @@ GRÁNÁT</button>
           }
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (!AudioCtx) return;
-          try { this.ctx = new AudioCtx(); } catch (_) { this.ctx = null; }
+          try { this.ctx = new AudioCtx(); } catch (err) { this.ctx = null; Dbg.report('E300', err && err.message); }
         },
 
         toggleMute() {
@@ -1355,7 +1473,7 @@ GRÁNÁT</button>
         },
 
         playTone(freq, endFreq, dur, type, vol, delay = 0) {
-          if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+          if (this.muted || !this.ctx || this.ctx.state !== 'running' || !this.voiceOk()) return;
           try {
             const now = this.ctx.currentTime + delay;
             const osc = this.ctx.createOscillator();
@@ -1375,13 +1493,17 @@ GRÁNÁT</button>
         },
 
         playNoise(dur, filterFreq, vol, type = 'bandpass') {
-          if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+          if (this.muted || !this.ctx || this.ctx.state !== 'running' || !this.voiceOk()) return;
           try {
             const sampleRate = this.ctx.sampleRate;
-            const len = Math.max(1, Math.floor(sampleRate * dur));
-            const buffer = this.ctx.createBuffer(1, len, sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+            const len = Math.max(1, Math.floor(sampleRate * Math.round(dur * 100) / 100));
+            let buffer = this.noiseCache[len]; // v13: a zaj-puffer újrahasznosítva (nem generálunk több tízezer mintát minden hangnál)
+            if (!buffer) {
+              buffer = this.ctx.createBuffer(1, len, sampleRate);
+              const data = buffer.getChannelData(0);
+              for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+              this.noiseCache[len] = buffer;
+            }
             const src = this.ctx.createBufferSource();
             src.buffer = buffer;
             const filter = this.ctx.createBiquadFilter();
@@ -2104,9 +2226,9 @@ GRÁNÁT</button>
         aimAngle: 0, padAim: null, mouseFire: false, mouse: { x: 0, y: 0, t: -99, kind: '', touchId: null }, shx: 0, shy: 0
       });
       const SETTINGS_KEY = 'c1k_settings';
-      const settings = { scares: true, shake: true, vibrate: true, muted: false, autoDefault: Boolean(window.matchMedia && window.matchMedia('(pointer:coarse)').matches) };
+      const settings = { scares: true, shake: true, vibrate: true, muted: false, autoDefault: Boolean(window.matchMedia && window.matchMedia('(pointer:coarse)').matches), fps: true, quality: 'auto', dry: 'fast' };
       try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (_) {}
-      function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} }
+      function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (err) { Dbg.report('E400', err && err.message); } }
       function buzz(ms) { if (settings.vibrate && navigator.vibrate) { try { navigator.vibrate(ms); } catch (_) {} } }
 
       function getCurrentWeapon() { return WEAPONS.find(w => w.id === state.currentWeaponId) || WEAPONS[0]; }
@@ -2155,7 +2277,7 @@ GRÁNÁT</button>
         buf.height = Math.ceil(state.height / PX);
         bctx.imageSmoothingEnabled = false;
         setupDecals();
-        const floorTop = Math.floor(state.height * 0.24);
+        const floorTop = Math.floor(state.height * 0.19);
         const floorBottom = Math.floor(state.height * 0.90);
         state.player.x = Math.max(54, Math.min(state.player.x, getBarricadeX() - 36));
         state.player.y = Math.max(floorTop + 20, Math.min(state.player.y, floorBottom - 16));
@@ -2236,13 +2358,15 @@ GRÁNÁT</button>
         document.getElementById('menu-modal').classList.remove('active');
         document.getElementById('boss-hud').classList.remove('active');
         AudioEngine.init();
+        const th = document.getElementById('touch-hint');
+        if (th) { th.classList.add('show'); clearTimeout(resetGame._th); resetGame._th = setTimeout(() => th.classList.remove('show'), 5500); }
         showWaveBanner('1. NAP // A RAJ KÖZELEDIK'); showStory(0); stripSig = '';
         updateHud();
       }
 
       // ===================== v8 CORE: félelem-rendező, húsdaráló harc, dinamikus fegyverek =====================
       const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-      function floorTopY() { return Math.floor(state.height * 0.25); }
+      function floorTopY() { return Math.floor(state.height * 0.2); } // v13: magasabbra húzott padló – nagyobb játéktér
       function floorBotY() { return Math.floor(state.height * 0.89); }
 
       // Napló – megbízhatatlan narrátor: a hős fokozatosan szétcsúszó elméje (pszichológiai horror).
@@ -2297,12 +2421,23 @@ GRÁNÁT</button>
       }
       function clearDecals() { dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0); dctx.clearRect(0, 0, decalCv.width, decalCv.height); dctx.restore(); }
       function fadeDecals(a) { dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0); dctx.globalCompositeOperation = 'destination-out'; dctx.fillStyle = `rgba(0,0,0,${a})`; dctx.fillRect(0, 0, decalCv.width, decalCv.height); dctx.restore(); }
+      // v13: vér-száradás – a padló-réteg fokozatosan sötétedik (alvad), majd elhalványul; sebesség a beállításokban
+      const DRY = { fast: { step: 0.35, corpse: 7, label: 'GYORS' }, normal: { step: 0.8, corpse: 12, label: 'NORMÁL' }, slow: { step: 2, corpse: 14, label: 'LASSÚ' } };
+      function dryCfg() { return DRY[settings.dry] || DRY.fast; }
+      function dryDecals() {
+        dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0);
+        dctx.globalCompositeOperation = 'source-atop'; dctx.fillStyle = 'rgba(26,9,6,.07)'; dctx.fillRect(0, 0, decalCv.width, decalCv.height);
+        dctx.globalCompositeOperation = 'destination-out'; dctx.fillStyle = 'rgba(0,0,0,.1)'; dctx.fillRect(0, 0, decalCv.width, decalCv.height);
+        dctx.restore();
+      }
       function paintSplat(x, y, color, size, dir = 1) {
         addDecal(x, y, color, size);
         dctx.fillStyle = color;
         const n = 4 + Math.floor(size / 5);
         for (let i = 0; i < n; i++) { const d = Math.random() * size * 1.7, sz = 2 + Math.random() * 4; dctx.fillRect(x + dir * d, y + (Math.random() - 0.5) * size * 0.45, sz, sz * 0.7); }
       }
+      const glowSprite = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
+      const shadowSprite = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 10; const g = c.getContext('2d'); g.fillStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.ellipse(16, 5, 16, 5, 0, 0, Math.PI * 2); g.fill(); return c; })();
       function addLight(x, y, r, life) { if (state.lights.length < 48) state.lights.push({ x, y, r, life, max: life }); }
 
       function getLamp() { return { x: state.player.x + 10, y: state.player.y - 33 }; }
@@ -2397,12 +2532,14 @@ GRÁNÁT</button>
       function startSurge() {
         showWaveBanner('☣ RAJ-ROHAM! TARTSD A VONALAT!');
         AudioEngine.playScream();
-        const n = 6 + Math.min(16, state.wave * 2);
+        const n = 6 + Math.min(40, state.wave * 2); // v13: késői napokon nagyobb hordák (a motor több százat is bír)
         for (let i = 0; i < n; i++) state.surgeQueue.push(Math.random() < 0.7 ? 'swarmer' : 'larva');
       }
 
+      function pCap() { return lowQ ? 220 : (state.heavy ? 380 : 520); }
       function spawnParticles(x, y, count, color, speedMin = 40, speedMax = 210, life = 0.35, size = 3, opts = null) {
-        if (state.particles.length > (lowQ ? 220 : 520)) return;
+        if (state.particles.length > pCap()) { if (state.time - (state.w703T || -99) > 15) { state.w703T = state.time; Dbg.report('W703', 'részecske: ' + state.particles.length); } return; }
+        if (state.heavy) count = Math.ceil(count * 0.5);
         for (let i = 0; i < count; i++) {
           const ang = Math.random() * Math.PI * 2;
           const spd = speedMin + Math.random() * (speedMax - speedMin);
@@ -2607,18 +2744,22 @@ GRÁNÁT</button>
         }
         if (!src || !src.dot) {
           AudioEngine.playHit(isCrit);
-          addFloatingText(enemy.x + (Math.random() - 0.5) * 12, enemy.y - enemy.hh - 6, isCrit ? `${dmg}!` : `${dmg}`, isCrit ? '#fde047' : '#f8fafc', 0.7, isCrit ? 16 : 12);
+          if (!state.heavy || (isCrit && state.floatingTexts.length < 30)) addFloatingText(enemy.x + (Math.random() - 0.5) * 12, enemy.y - enemy.hh - 6, isCrit ? `${dmg}!` : `${dmg}`, isCrit ? '#fde047' : '#f8fafc', 0.7, isCrit ? 16 : 12);
           const bl = bloodOf(enemy);
-          for (let i = 0; i < 6; i++) {
+          const nb = state.particles.length > pCap() ? 0 : (state.heavy ? 2 : 6);
+          for (let i = 0; i < nb; i++) {
             state.particles.push({ x: enemy.x, y: enemy.y - enemy.hh * 0.3, vx: dir * (60 + Math.random() * 200), vy: -80 - Math.random() * 140, life: 0.5, maxLife: 0.5, color: Math.random() < 0.7 ? bl : '#d26b73', size: 2 + Math.random() * 3, gravity: 620 });
           }
-          if (Math.random() < 0.35) spawnGibs(enemy, 1, bl, dir);
-          if (Math.random() < 0.25) paintSplat(enemy.x + dir * 14, enemy.y + enemy.foot * 0.8, bl, 8, dir);
+          if (Math.random() < (state.heavy ? 0.12 : 0.35)) spawnGibs(enemy, 1, bl, dir);
+          if (Math.random() < (state.heavy ? 0.1 : 0.25)) paintSplat(enemy.x + dir * 14, enemy.y + enemy.foot * 0.8, bl, 8, dir);
         }
         if (enemy.hp <= 0) handleEnemyDeath(enemy, overkill, dir);
       }
 
       function spawnPickup(x, y, kind, value) {
+        if (state.pickups.length > 90 && kind !== 'medkit' && kind !== 'cell') { // v13: tömeges ölésnél a kredit egyből jóváíródik (nincs több száz érme a padlón)
+          state.coins += value; state.totalEarned += value; state.score += value * 3; return;
+        }
         state.pickups.push({ x, y, vx: (Math.random() - 0.5) * 90, vy: -60 - Math.random() * 50, kind, value, bob: Math.random() * Math.PI * 2, life: 16 });
       }
 
@@ -2655,7 +2796,7 @@ GRÁNÁT</button>
           const gy = clamp(e.y + e.foot * 0.7 + (Math.random() - 0.5) * 24, ft, fb + 6);
           state.gibs.push({ img: sp, sx, sy, sw, sh, x: cx, gy, z: Math.max(0, gy - cy), vz: (60 + Math.random() * 240) * power, vx: (dir * (40 + Math.random() * 220) + (Math.random() - 0.5) * 170) * power, vg: (Math.random() - 0.5) * 70, b: 0, c: blood, s: Math.max(sw, sh) / 2 });
         }
-        while (state.gibs.length > 240) bakeGib(state.gibs.shift());
+        while (state.gibs.length > gibCap()) bakeGib(state.gibs.shift());
       }
 
       function handleEnemyDeath(enemy, overkill = false, dir = 1) {
@@ -2669,14 +2810,14 @@ GRÁNÁT</button>
         AudioEngine.playSplat(overkill || big);
         paintSplat(enemy.x, enemy.y + enemy.foot * 0.8, blood, Math.min(40, enemy.radius * 1.4), dir);
         for (let q = 0; q < 3; q++) addDecal(enemy.x + (Math.random() - 0.5) * 50, enemy.y + enemy.foot * 0.75 + (Math.random() - 0.3) * 18, Math.random() < 0.7 ? '#5a0e16' : blood, 12 + Math.random() * 16);
-        if (overkill || enemy.isBoss || Math.random() < 0.4) {
+        if (enemy.isBoss || ((overkill || Math.random() < 0.4) && (!state.heavy || Math.random() < 0.35))) {
           shatterSprite(enemy, sp, dir, overkill ? 1.35 : 1, blood);
           if (overkill && !enemy.isBoss) addFloatingText(enemy.x, enemy.y - enemy.hh - 16, 'SZÉTLOCCSANT!', '#fb7185', 0.9, 13);
         } else {
-          state.corpses.push({ sp, x: enemy.x, y: enemy.y, r: enemy.foot * 0.85, life: 14 });
+          state.corpses.push({ sp, x: enemy.x, y: enemy.y, r: enemy.foot * 0.85, life: dryCfg().corpse });
           if (state.corpses.length > 24) state.corpses.shift();
         }
-        spawnGibs(enemy, enemy.isBoss ? 40 : (big ? 16 : 9), blood, dir);
+        spawnGibs(enemy, enemy.isBoss ? 40 : (state.heavy ? (big ? 6 : 3) : (big ? 16 : 9)), blood, dir);
         spawnParticles(enemy.x, enemy.y, 22, blood, 60, 320, 0.6, 5, { gravity: 500 });
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 40 : 12, enemy.accent || '#84cc16', 55, 260, 0.5, 4.5);
         if (big) state.hitStop = Math.max(state.hitStop, enemy.isBoss ? 0.3 : 0.05);
@@ -2896,7 +3037,7 @@ GRÁNÁT</button>
         }
         if (state.surgeQueue.length) {
           state.surgeT = (state.surgeT || 0) - dt;
-          if (state.surgeT <= 0 && state.enemies.length < 90) { state.surgeT = 0.14; const e = spawnEnemy(state.surgeQueue.shift()); e.speed *= 1.1; }
+          if (state.surgeT <= 0 && state.enemies.length < 160) { state.surgeT = 0.14; const e = spawnEnemy(state.surgeQueue.shift()); e.speed *= 1.1; }
         }
         if (state.comboTimer > 0) { state.comboTimer -= dt; if (state.comboTimer <= 0) endCombo(); }
       }
@@ -2930,8 +3071,10 @@ GRÁNÁT</button>
         gpPrev[9] = p;
       }
 
+      const hitGrid = [], G_CELL = 48, G_OFF = 220;
       function update(dt) {
         state.time += dt;
+        state.heavy = lowQ || state.enemies.length > 80 || state.particles.length > 420;
         if (state.waveBannerTimer > 0) {
           state.waveBannerTimer -= dt;
           if (state.waveBannerTimer <= 0) document.getElementById('wave-banner').classList.remove('show');
@@ -2975,6 +3118,8 @@ GRÁNÁT</button>
 
         if (!state.running || state.gameOver) return;
 
+        state.dryT = (state.dryT || 0) - dt;
+        if (state.dryT <= 0) { state.dryT = dryCfg().step; dryDecals(); }
         state.barkCd -= dt;
         state.grenadeCd = Math.max(0, state.grenadeCd - dt);
         if (state.adrenTime > 0) { state.adrenTime -= dt; if (state.adrenTime <= 0) addFloatingText(state.player.x, state.player.y - 40, 'ADRENALIN ELFOGYOTT', '#fca5a5', 1.2, 12); }
@@ -3047,6 +3192,14 @@ GRÁNÁT</button>
           state.spawnTimer = Math.max(0.3, 1.45 - state.wave * 0.09) * (n > 1 ? 1.4 : 1);
         }
 
+        // v13: x-irányú térbeli rács – egy lövedék csak a közeli szörnyeket vizsgálja (több száz szörnynél is gyors)
+        const gN = Math.ceil((state.width + 2 * G_OFF) / G_CELL) + 1;
+        for (let k = 0; k < gN; k++) (hitGrid[k] || (hitGrid[k] = [])).length = 0;
+        for (const e of state.enemies) {
+          if (e.hp <= 0) continue;
+          const a = Math.max(0, Math.floor((e.x - e.hw - 6 + G_OFF) / G_CELL)), b = Math.min(gN - 1, Math.floor((e.x + e.hw + 6 + G_OFF) / G_CELL));
+          for (let k = a; k <= b; k++) hitGrid[k].push(e);
+        }
         for (let i = state.projectiles.length - 1; i >= 0; i--) {
           const p = state.projectiles[i];
           if (p.kind === 'beam' || p.kind === 'bolt') { p.life -= dt; if (p.life <= 0) state.projectiles.splice(i, 1); continue; }
@@ -3063,8 +3216,9 @@ GRÁNÁT</button>
           if (p.kind === 'rocket' && Math.random() < dt * 40) state.particles.push({ x: p.x - 8, y: p.y, vx: -30 + Math.random() * 20, vy: (Math.random() - 0.5) * 20, life: 0.5, maxLife: 0.5, color: Math.random() < 0.5 ? '#fb923c' : '#4b4038', size: 4, glow: true });
           if (p.kind === 'flame') { p.vx *= Math.pow(0.4, dt); p.vy -= 30 * dt; }
           if (p.life <= 0 || p.x > state.width + 60 || p.x < -60 || p.y < -60 || p.y > state.height + 60) { state.projectiles.splice(i, 1); continue; }
-          for (let j = state.enemies.length - 1; j >= 0; j--) {
-            const e = state.enemies[j];
+          const gk = Math.floor((p.x + G_OFF) / G_CELL), cell = gk >= 0 && gk < gN ? hitGrid[gk] : null;
+          if (cell) for (let j = cell.length - 1; j >= 0; j--) {
+            const e = cell[j];
             if (e.hp <= 0 || p.hitIds.has(e)) continue;
             if (Math.abs(p.x - e.x) <= e.hw + 6 && Math.abs(p.y - (e.y - e.hh * 0.1)) <= e.hh + 4) {
               p.hitIds.add(e);
@@ -3108,7 +3262,7 @@ GRÁNÁT</button>
             const dps = (e.burn > 0 ? 16 + state.wave * 1.4 : 0) + (e.acid > 0 ? 10 + state.wave : 0);
             e.burn = Math.max(0, e.burn - dt); e.acid = Math.max(0, e.acid - dt);
             e.dotAcc += dps * dt;
-            if (Math.random() < dt * 14) state.particles.push({ x: e.x + (Math.random() - 0.5) * e.hw, y: e.y - Math.random() * e.hh, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 50, life: 0.4, maxLife: 0.4, color: e.burn > 0 ? (Math.random() < 0.5 ? '#fb923c' : '#fde047') : '#a3e635', size: 3, glow: true });
+            if (Math.random() < dt * (state.heavy ? 4 : 14) && state.particles.length < pCap()) state.particles.push({ x: e.x + (Math.random() - 0.5) * e.hw, y: e.y - Math.random() * e.hh, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 50, life: 0.4, maxLife: 0.4, color: e.burn > 0 ? (Math.random() < 0.5 ? '#fb923c' : '#fde047') : '#a3e635', size: 3, glow: true });
             if (e.dotAcc >= 4) { const d = Math.floor(e.dotAcc); e.dotAcc -= d; damageEnemy(e, d, false, { dot: true }); if (e.hp <= 0) continue; }
           }
           const animK = (e.stun > 0 ? 0 : 1) * (e.slow > 0 ? 0.5 : 1) * (e.beh === 'lunge' ? 2 : 1);
@@ -3176,7 +3330,7 @@ GRÁNÁT</button>
             e.x -= e.speed * mult * sm * dt;
             e.y = clampEnemyY(e, e.y + e.vy * dt * (e.stun > 0 ? 0 : 1));
           }
-          if (e.hp < e.maxHp * 0.6 && Math.random() < dt * 3) addDecal(e.x + (Math.random() - 0.5) * 8, e.y + e.foot * 0.85, bloodOf(e), 5);
+          if (e.hp < e.maxHp * 0.6 && Math.random() < dt * (state.heavy ? 0.5 : 3)) addDecal(e.x + (Math.random() - 0.5) * 8, e.y + e.foot * 0.85, bloodOf(e), 5);
 
           if (e.hp > 0 && Math.hypot(e.x - state.player.x, e.y - state.player.y) < e.radius + 16) {
             state.lastHitBy = e.name;
@@ -3275,8 +3429,9 @@ GRÁNÁT</button>
             s: 3 + Math.floor(Math.random() * ((e.radius || 10) > 20 ? 7 : 4)), c: cols[Math.floor(Math.random() * cols.length)], b: 0
           });
         }
-        while (state.gibs.length > 240) bakeGib(state.gibs.shift());
+        while (state.gibs.length > gibCap()) bakeGib(state.gibs.shift());
       }
+      function gibCap() { return state.heavy ? 140 : 240; }
       // Leérkezett cafat "beleég" a padlóba: ott marad, és nem terheli a renderelést.
       function bakeGib(g) {
         if (g.img) {
@@ -3319,8 +3474,9 @@ GRÁNÁT</button>
         for (let i = state.lights.length - 1; i >= 0; i--) { state.lights[i].life -= dt; if (state.lights[i].life <= 0) state.lights.splice(i, 1); }
       }
 
-      function drawShipDecor(w, h, ft, fb) {
+      function drawShipDecor(w, h, ft, fb, stat) {
         const t = state.time;
+        if (stat) {
         ctx.fillStyle = 'rgba(60,24,8,.34)'; ctx.fillRect(0, 0, w, h);
         for (let k = 0; k < 3; k++) {
           const y = h * (0.035 + k * 0.032), ph = h * 0.018;
@@ -3344,6 +3500,10 @@ GRÁNÁT</button>
           }
         }
         for (let x = 0; x < w; x += 16) { ctx.fillStyle = (x / 16) % 2 ? '#c9951f' : '#17110c'; ctx.fillRect(x, ft - 2, 16, 6); }
+        ctx.fillStyle = '#4a0b12';
+        for (let i = 0; i < 6; i++) ctx.fillRect(w * (0.06 + i * 0.17), h * 0.1, 5, h * (0.05 + (i % 3) * 0.03));
+        return;
+        }
         for (let i = 0; i < 9; i++) {
           const cx = (i * 0.113 + 0.04) * w + Math.sin(i * 5) * 12, cy = (i % 3) * h * 0.035 + h * 0.02;
           const r = (10 + (i % 4) * 5) * (1 + Math.sin(t * 2 + i) * 0.06);
@@ -3359,27 +3519,10 @@ GRÁNÁT</button>
           const dl = Math.min(40, (t * 18 + i * 31) % 70);
           ctx.fillStyle = '#8fd12b'; ctx.fillRect(cx + r * 0.4, cy + r, 2, dl); ctx.fillRect(cx + r * 0.4 - 1, cy + r + dl, 4, 3);
         }
-        ctx.fillStyle = '#4a0b12';
-        for (let i = 0; i < 6; i++) ctx.fillRect(w * (0.06 + i * 0.17), h * 0.1, 5, h * (0.05 + (i % 3) * 0.03));
         if (settings.scares && Math.sin(t * 37) * Math.sin(t * 11) > 0.8) { ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(0, 0, w, h); }
       }
 
-      function render() {
-        const w = state.width;
-        const h = state.height;
-        const floorTop = Math.floor(h * 0.24);
-        const floorBottom = Math.floor(h * 0.90);
-
-        ctx = bctx;
-        ctx.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
-        ctx.imageSmoothingEnabled = false;
-        ctx.save();
-        state.shx = 0; state.shy = 0;
-        if (state.shakeTime > 0 && state.shakeIntensity > 0) {
-          state.shx = (Math.random() * 2 - 1) * state.shakeIntensity; state.shy = (Math.random() * 2 - 1) * state.shakeIntensity;
-          ctx.translate(state.shx, state.shy);
-        }
-
+      function drawStaticBg(w, h, floorTop, floorBottom) {
         // SECTOR-09: cinematic cargo-ship corridor and planetary viewport.
         const spaceGrad = ctx.createLinearGradient(0, 0, 0, floorTop + 30);
         spaceGrad.addColorStop(0, '#02040a');
@@ -3505,6 +3648,38 @@ GRÁNÁT</button>
           ctx.fillStyle = 'rgba(125,211,252,.12)';
           ctx.fillRect(horizonX - half, y, half * 2, 3 + t * 4);
         }
+      }
+      const drawList = []; const bySortY = (a, b) => a._sy - b._sy;
+      const bgCv = document.createElement('canvas'); const bgx = bgCv.getContext('2d'); let bgKey = '';
+
+      function render() {
+        const w = state.width;
+        const h = state.height;
+        const floorTop = Math.floor(h * 0.19);
+        const floorBottom = Math.floor(h * 0.90);
+
+        ctx = bctx;
+        ctx.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.save();
+        state.shx = 0; state.shy = 0;
+        if (state.shakeTime > 0 && state.shakeIntensity > 0) {
+          state.shx = (Math.random() * 2 - 1) * state.shakeIntensity; state.shy = (Math.random() * 2 - 1) * state.shakeIntensity;
+          ctx.translate(state.shx, state.shy);
+        }
+
+        // v13: a statikus folyosó-háttér (≈20 gradiens) egyszer készül el egy gyorsítótár-vászonra, nem minden képkockán
+        if (bgCv.width !== buf.width || bgCv.height !== buf.height || bgKey !== w + 'x' + h + 'p' + PX) {
+          bgCv.width = buf.width; bgCv.height = buf.height; bgKey = w + 'x' + h + 'p' + PX;
+          const keep = ctx; ctx = bgx;
+          ctx.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0); ctx.imageSmoothingEnabled = false;
+          drawStaticBg(w, h, floorTop, floorBottom);
+          drawShipDecor(w, h, floorTop, floorBottom, true);
+          ctx = keep;
+        }
+        ctx.drawImage(bgCv, 0, 0, bgCv.width * PX, bgCv.height * PX);
+        ctx.globalAlpha = 0.7;
+        const horizonX = w * .49, horizonY = h * .34;
         const alarm = .35 + .35 * Math.sin(state.time * 5.2);
         ctx.fillStyle = `rgba(239,68,68,${alarm})`;
         ctx.fillRect(w * .12, h * .17, 18, 5);
@@ -3537,8 +3712,9 @@ GRÁNÁT</button>
         beaconGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
         ctx.fillStyle = beaconGrad;
         ctx.fillRect(0, 0, w, h);
+        ctx.globalAlpha = 1;
 
-        drawShipDecor(w, h, floorTop, floorBottom);
+        drawShipDecor(w, h, floorTop, floorBottom, false);
         ctx.drawImage(decalCv, 0, 0, decalCv.width * PX, decalCv.height * PX);
 
         for (const fp of state.firePools) {
@@ -3594,10 +3770,16 @@ GRÁNÁT</button>
         }
         ctx.globalAlpha = 1;
 
-        const renderables = [{ sortY: state.player.y, draw: drawPlayer }];
-        for (const e of state.enemies) renderables.push({ sortY: e.y + e.foot * 0.5, draw: () => drawEnemy(e) });
-        renderables.sort((a, b) => a.sortY - b.sortY);
-        for (const item of renderables) item.draw();
+        // v13: mélységi rendezés lezárások/objektumok nélkül, képernyőn kívüli szörnyek kihagyva
+        drawList.length = 0;
+        for (const e of state.enemies) {
+          if (e.x - e.hw * 1.8 > w + 8) { e._eyes = null; continue; }
+          e._sy = e.y + e.foot * 0.5; drawList.push(e);
+        }
+        drawList.sort(bySortY);
+        let heroDrawn = false;
+        for (const e of drawList) { if (!heroDrawn && e._sy >= state.player.y) { drawPlayer(); heroDrawn = true; } drawEnemy(e); }
+        if (!heroDrawn) drawPlayer();
 
         for (const pt of state.particles) {
           if (pt.glow) continue;
@@ -3672,8 +3854,8 @@ GRÁNÁT</button>
           if (Math.sin(state.time * 1.3 + e.seed * 5) > 0.985) continue;
           for (const [ex, ey, col, s] of e._eyes) {
             ctx.fillStyle = col;
-            ctx.globalAlpha = eyeBoost; ctx.fillRect(ex - s * 1.6, ey - s * 1.2, s * 3.2, s * 2.4);
-            ctx.globalAlpha = 1; ctx.fillRect(ex - s / 2, ey - s / 2, s, s);
+            if (!state.heavy || state.blackout > 0) { ctx.globalAlpha = eyeBoost; ctx.fillRect(ex - s * 1.6, ey - s * 1.2, s * 3.2, s * 2.4); ctx.globalAlpha = 1; }
+            ctx.fillRect(ex - s / 2, ey - s / 2, s, s);
           }
         }
         for (const hl of state.hallu) {
@@ -3707,11 +3889,15 @@ GRÁNÁT</button>
         lctx.fillRect(0, 0, lightCv.width, lightCv.height);
         lctx.setTransform(0.5 / PX, 0, 0, 0.5 / PX, 0.5 * (state.shx || 0) / PX, 0.5 * (state.shy || 0) / PX);
         lctx.globalCompositeOperation = 'destination-out';
+        // v13: egyetlen előre megrajzolt fény-sprite (nem készül új gradiens minden fényforrásra)
+        let holes = 0;
         const hole = (x, y, r, a) => {
-          if (r <= 1 || a <= 0) return;
-          const g = lctx.createRadialGradient(x, y, 0, x, y, r);
-          g.addColorStop(0, `rgba(0,0,0,${Math.min(1, a)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
-          lctx.fillStyle = g; lctx.fillRect(x - r, y - r, r * 2, r * 2);
+          if (r <= 1 || a <= 0 || holes > (state.heavy ? 45 : 90)) return;
+          if (x + r < -40 || x - r > w + 40 || y + r < -40 || y - r > h + 40) return;
+          holes++;
+          lctx.globalAlpha = Math.min(1, a);
+          lctx.drawImage(glowSprite, x - r, y - r, r * 2, r * 2);
+          lctx.globalAlpha = 1;
         };
         if (state.running || state.devouring) {
           const L = getLamp(), a = state.aimAngle, len = w * 0.8, half = 0.34, f = state.flashlight * (state.blackout > 0 ? 0.85 : 1);
@@ -3737,7 +3923,8 @@ GRÁNÁT</button>
           if (p.kind === 'plasma' || p.kind === 'rocket' || p.kind === 'flame' || p.kind === 'bio' || p.kind === 'mortar') hole(p.x, p.y - (p.z || 0), p.kind === 'flame' ? 34 : 46, 0.55);
           else if (p.kind === 'pulse' || p.kind === 'saw') hole(p.x, p.y, 26, 0.4);
         }
-        for (const e of state.enemies) if (e.burn > 0) hole(e.x, e.y - e.hh * 0.3, 60, 0.6);
+        let burnLights = 0;
+        for (const e of state.enemies) if (e.burn > 0 && burnLights++ < (state.heavy ? 14 : 40)) hole(e.x, e.y - e.hh * 0.3, 60, 0.6);
         for (const fp of state.firePools) hole(fp.x, fp.y - 10, fp.r * 1.7, 0.7 * Math.min(1, fp.life) * (0.85 + 0.15 * Math.sin(state.time * 17)));
         for (const pool of state.acidPools) hole(pool.x, pool.y, pool.radius * 1.4, 0.25);
         if (state.muzzleFlash > 0) { const m = getMuzzle(); hole(m.x, m.y, 150, state.muzzleFlash / 0.07); }
@@ -3829,18 +4016,26 @@ GRÁNÁT</button>
         ctx.fillStyle = '#fffbe6'; ctx.fillRect(p.x + 1, p.y - 1, 5, 2);
       }
 
+      const vigCv = document.createElement('canvas'), vigx = vigCv.getContext('2d'); let vigKey = '';
       function drawScreenFx() {
         const kx = CW / state.width, ky = CH / state.height;
         if (state.running || state.devouring) {
           const f = state.fear / 100;
           if (f > 0.25) {
-            const r0 = Math.max(CW, CH) * (0.66 - f * 0.26 - (state.heartPulse || 0) * 0.03);
-            const g = ctx.createRadialGradient(CW / 2, CH / 2, r0 * 0.35, CW / 2, CH / 2, r0);
-            g.addColorStop(0, 'rgba(0,0,0,0)');
-            g.addColorStop(1, `rgba(${f > 0.7 ? 40 : 0},0,${f > 0.7 ? 6 : 0},${Math.min(0.85, (f - 0.25) * 1.3)})`);
-            ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+            // v13: a félelem-vignetta kis vásznon készül (csak ha változik), és felnagyítva kerül ki – nincs teljes felbontású gradiens minden képkockán
+            const fq = Math.round(f * 40), hq = Math.round((state.heartPulse || 0) * 4), key = fq + ':' + hq + ':' + CW + 'x' + CH;
+            if (vigKey !== key) {
+              vigKey = key; const VW = 160, VH = Math.max(40, Math.round(160 * CH / CW)), fv = fq / 40;
+              vigCv.width = VW; vigCv.height = VH;
+              const sc = VW / CW, r0 = Math.max(CW, CH) * (0.66 - fv * 0.26 - hq / 4 * 0.03) * sc;
+              const g = vigx.createRadialGradient(VW / 2, VH / 2, r0 * 0.35, VW / 2, VH / 2, r0);
+              g.addColorStop(0, 'rgba(0,0,0,0)');
+              g.addColorStop(1, `rgba(${fv > 0.7 ? 40 : 0},0,${fv > 0.7 ? 6 : 0},${Math.min(0.85, (fv - 0.25) * 1.3)})`);
+              vigx.fillStyle = g; vigx.fillRect(0, 0, VW, VH);
+            }
+            ctx.imageSmoothingEnabled = true; ctx.drawImage(vigCv, 0, 0, CW, CH); ctx.imageSmoothingEnabled = false;
           }
-          if (f > 0.85 && settings.scares) {
+          if (f > 0.85 && settings.scares && !state.heavy) {
             const o = (f - 0.85) * 40 * (1 + Math.sin(state.time * 3));
             ctx.globalAlpha = 0.14;
             ctx.drawImage(buf, 0, 0, buf.width, buf.height, o, 0, CW, CH);
@@ -3853,10 +4048,11 @@ GRÁNÁT</button>
         if (state.running && state.hp < state.maxHp * 0.3) { ctx.fillStyle = 'rgba(120,0,0,' + (0.12 + 0.08 * Math.sin(state.time * 6)) + ')'; ctx.fillRect(0, 0, CW, CH); }
 
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        let lastFont = 0;
         for (const t of state.floatingTexts) {
           const a = Math.max(0, Math.min(1, (t.life / t.maxLife) * 2));
           const size = Math.round((t.size || 13) * Math.max(0.85, Math.min(1.6, kx)));
-          ctx.font = `900 ${size}px "Courier New", monospace`;
+          if (size !== lastFont) { lastFont = size; ctx.font = `900 ${size}px "Courier New", monospace`; }
           ctx.globalAlpha = a;
           const X = Math.round(t.x * kx), Y = Math.round(t.y * ky);
           ctx.fillStyle = '#000'; ctx.fillText(t.text, X + 2, Y + 2);
@@ -3944,12 +4140,17 @@ GRÁNÁT</button>
         const tw = Math.sin(state.time * 31 + e.seed * 7) > 0.97 ? (e.seed % 2 > 1 ? -3 : 3) : 0;
         const dh = sp.height * br;
         const dx = Math.round(e.x - sp.width / 2) + tw, dy = Math.round(e.y - sp.height * 0.55 + sp.height - dh + bob);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.beginPath(); ctx.ellipse(e.x, e.y + e.foot, sp.width * 0.32, 5, 0, 0, Math.PI * 2); ctx.fill();
+        const shw = sp.width * 0.32;
+        if (state.heavy) { ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(e.x - shw * 0.8, e.y + e.foot - 2, shw * 1.6, 4); }
+        else ctx.drawImage(shadowSprite, e.x - shw, e.y + e.foot - 5, shw * 2, 10);
         let alpha = Math.min(1, e.age * 2.5);
         if (e.typeKey === 'wraith') alpha *= e.lit ? 0.95 : 0.5 + 0.2 * Math.sin(state.time * 9 + e.seed);
         ctx.globalAlpha = alpha;
         ctx.drawImage(sp, dx, dy, sp.width, dh);
+        if (state.heavy) { // v13: nagy tömegnél szörnyenként legfeljebb egy állapot-réteg (villanás > égés > bénulás > fagy > sav)
+          const ov = e.hitFlash > 0 ? '#ffffff' : e.burn > 0 ? '#ff7a1a' : e.stun > 0 ? '#c7d2fe' : e.slow > 0 ? '#9be7ff' : e.acid > 0 ? '#a3e635' : e.enraged ? '#ff0011' : null;
+          if (ov) { ctx.globalAlpha = ov === '#ffffff' ? 0.85 : alpha * 0.4; ctx.drawImage(silhouette(sp, ov), dx, dy, sp.width, dh); }
+        } else {
         if (e.burn > 0) { ctx.globalAlpha = alpha * (0.3 + 0.2 * Math.sin(state.time * 20)); ctx.drawImage(silhouette(sp, '#ff7a1a'), dx, dy, sp.width, dh); }
         if (e.acid > 0) { ctx.globalAlpha = alpha * 0.28; ctx.drawImage(silhouette(sp, '#a3e635'), dx, dy, sp.width, dh); }
         if (e.slow > 0) { ctx.globalAlpha = alpha * 0.4; ctx.drawImage(silhouette(sp, '#9be7ff'), dx, dy, sp.width, dh); }
@@ -3957,13 +4158,18 @@ GRÁNÁT</button>
         if (e.buff > 0) { ctx.globalAlpha = alpha * 0.22; ctx.drawImage(silhouette(sp, '#f472b6'), dx, dy, sp.width, dh); }
         if (e.enraged) { ctx.globalAlpha = 0.18 + 0.15 * Math.sin(state.time * 10); ctx.drawImage(silhouette(sp, '#ff0011'), dx, dy, sp.width, dh); }
         if (e.hitFlash > 0) { ctx.globalAlpha = 0.85; ctx.drawImage(silhouette(sp, '#ffffff'), dx, dy, sp.width, dh); }
+        }
         ctx.globalAlpha = 1;
         if (e.hp < e.maxHp * 0.5) {
           ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sp.width * 0.4, dy + sp.height * 0.45, 7, 6);
           ctx.fillStyle = '#d02a3a'; ctx.fillRect(dx + sp.width * 0.4 + 1, dy + sp.height * 0.45 + 1, 4, 3);
           if (e.hp < e.maxHp * 0.25) { ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sp.width * 0.6, dy + sp.height * 0.3, 6, 7); ctx.fillStyle = '#e8dcc4'; ctx.fillRect(dx + sp.width * 0.6 + 1, dy + sp.height * 0.3 + 2, 3, 1); }
         }
-        e._eyes = (e.typeKey === 'wraith' && !e.lit) ? null : sp.eyes.map(([ex, ey, col, s]) => [dx + ex, dy + ey * br, col, s]);
+        if (e.typeKey === 'wraith' && !e.lit) e._eyes = null;
+        else {
+          const E = e._eyes || (e._eyes = []); E.length = sp.eyes.length;
+          for (let i = 0; i < sp.eyes.length; i++) { const q = sp.eyes[i], o = E[i] || (E[i] = [0, 0, '', 0]); o[0] = dx + q[0]; o[1] = dy + q[1] * br; o[2] = q[2]; o[3] = q[3]; }
+        }
         if (!e.isBoss && e.hp < e.maxHp) {
           const bw = Math.max(22, e.hw * 1.2), ratio = Math.max(0, e.hp / e.maxHp);
           ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(e.x - bw * 0.5, dy - 8, bw, 4);
@@ -4041,6 +4247,7 @@ GRÁNÁT</button>
         setTxt('hud-shd-txt', `${Math.ceil(state.shield)} / ${state.maxShield}`); setW('shield-fill', state.maxShield > 0 ? (state.shield / state.maxShield) * 100 : 0);
         setTxt('hud-bar-txt', `${Math.ceil(state.barricadeHp)} / ${state.barricadeMaxHp}`); setW('barricade-fill', (state.barricadeHp / state.barricadeMaxHp) * 100);
         setTxt('hud-weap-txt', w.name.split(' ').slice(-1)[0].toUpperCase()); setW('heat-fill', state.weaponHeat);
+        setTxt('btn-switch-weap', '🔄 VÁLTÁS\n' + w.name.split(' ').slice(-1)[0].toUpperCase().slice(0, 9));
         const f = state.fear;
         setTxt('hud-fear-txt', f >= 88 ? 'ŐRÜLET' : f >= 70 ? 'PÁNIK' : f >= 50 ? 'RETTEGÉS' : f >= 25 ? 'FESZÜLT' : 'NYUGODT');
         setW('fear-fill', f); setCls('fear-panel', 'high', f >= 70);
@@ -4071,13 +4278,6 @@ GRÁNÁT</button>
         setCls('pill-adren', 'ready', aReady); setCls('btn-adren', 'ready', aReady);
         const sig = state.unlockedWeapons.join(',') + '|' + state.currentWeaponId;
         if (sig !== stripSig) { stripSig = sig; buildWeaponStrip(); }
-        if (state.showDiag) {
-          document.getElementById('diag-box').innerHTML =
-            `FPS: ${state.fps} | DPR: ${state.dpr.toFixed(1)}<br/>` +
-            `RES: ${state.width}x${state.height} | ENEMIES: ${state.enemies.length}<br/>` +
-            `ARMOR T${state.armorTier} | BAR LV.${state.barricadeLevel}<br/>` +
-            `FEAR ${Math.round(state.fear)} | GIBS ${state.gibs.length} | PART ${state.particles.length}`;
-        }
       }
 
       let activeTab = 'weapons';
@@ -4420,7 +4620,7 @@ GRÁNÁT</button>
       document.getElementById('btn-switch-weap').addEventListener('click', () => cycleWeapon(1));
 
       const autoBtn = document.getElementById('btn-autofire');
-      function syncAutoBtn() { autoBtn.textContent = state.autoFire ? '🎯\nAUTO BE' : '🎯\nAUTO KI'; autoBtn.classList.toggle('active', state.autoFire); }
+      function syncAutoBtn() { autoBtn.textContent = state.autoFire ? '🎯 AUTO\n● BE' : '🎯 AUTO\n○ KI'; autoBtn.classList.toggle('active', state.autoFire); }
       function toggleAuto() { state.autoFire = !state.autoFire; syncAutoBtn(); }
       autoBtn.addEventListener('click', toggleAuto);
       for (const id of ['btn-grenade', 'pill-grenade']) { const b = document.getElementById(id); if (b) b.addEventListener('pointerdown', e => { e.preventDefault(); throwGrenade(); }); }
@@ -4429,11 +4629,7 @@ GRÁNÁT</button>
       document.getElementById('btn-open-shop').addEventListener('click', openMenu);
       document.getElementById('btn-back-game').addEventListener('click', closeMenu);
       document.getElementById('btn-audio').addEventListener('click', () => { AudioEngine.toggleMute(); settings.muted = AudioEngine.muted; saveSettings(); refreshSettingsPanels(); });
-      document.getElementById('btn-diag').addEventListener('click', () => {
-        state.showDiag = !state.showDiag;
-        document.getElementById('diag-box').classList.toggle('show', state.showDiag);
-        updateHud();
-      });
+      document.getElementById('btn-diag').addEventListener('click', () => setDebugOpen(!Dbg.open));
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -4521,7 +4717,8 @@ GRÁNÁT</button>
             ['scares', '👁 IJESZTÉSEK & VILLÓDZÁS', false],
             ['shake', '💥 KÉPERNYŐRÁZÁS', false],
             ['vibrate', '📳 REZGÉS (MOBIL)', false],
-            ['autoDefault', '🎯 AUTO-TŰZ INDULÁSKOR', false]
+            ['autoDefault', '🎯 AUTO-TŰZ INDULÁSKOR', false],
+            ['fps', '⏱ SEBESSÉGMÉRŐ (FPS)', false]
           ];
           for (const [k, label, inverted] of rows) {
             const on = inverted ? !settings[k] : Boolean(settings[k]);
@@ -4531,10 +4728,16 @@ GRÁNÁT</button>
             b.addEventListener('click', () => {
               settings[k] = !settings[k];
               if (k === 'muted') { AudioEngine.muted = !settings.muted; AudioEngine.toggleMute(); }
+              if (k === 'fps') updatePerfUi();
               saveSettings(); refreshSettingsPanels();
             });
             el.appendChild(b);
           }
+          const cyc = (label, val, onClick) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'hbtn small toggle on'; b.textContent = `${label}: ${val}`; b.addEventListener('click', onClick); el.appendChild(b); };
+          cyc('🩸 VÉR FELSZÁRADÁSA', dryCfg().label, () => { settings.dry = settings.dry === 'fast' ? 'normal' : settings.dry === 'normal' ? 'slow' : 'fast'; saveSettings(); refreshSettingsPanels(); });
+          cyc('🖥 GRAFIKA', settings.quality === 'auto' ? 'AUTO' : settings.quality === 'high' ? 'MAGAS' : 'ALACSONY (GYORS)', () => { settings.quality = settings.quality === 'auto' ? 'high' : settings.quality === 'high' ? 'low' : 'auto'; saveSettings(); applyQuality(); refreshSettingsPanels(); updatePerfUi(); });
+          const dbgB = document.createElement('button'); dbgB.type = 'button'; dbgB.className = 'hbtn small'; dbgB.textContent = '🛠 HIBAKERESŐ MEGNYITÁSA';
+          dbgB.addEventListener('click', () => setDebugOpen(true)); el.appendChild(dbgB);
           const row = document.createElement('div'); row.className = 'ui-row full';
           const minus = document.createElement('button'); minus.type = 'button'; minus.className = 'hbtn small'; minus.textContent = 'KEZELŐFELÜLET −';
           const val = document.createElement('span'); val.textContent = Math.round(uiScale * 100) + '%';
@@ -4673,32 +4876,110 @@ GRÁNÁT</button>
       let fpsAccum = 0;
       let fpsFrames = 0;
 
+      let skipLag = 2, fpsMinWin = 99, fpsMinT = 0;
+      document.addEventListener('visibilitychange', () => { skipLag = 3; });
       function loop(now) {
-        if (now - lastTs < 15) { requestAnimationFrame(loop); return; } // v12: 90/120 Hz kijelzőn is max ~60 fps – feleannyi terhelés
+        requestAnimationFrame(loop);
+        if (now - lastTs < 15) return; // v12: 90/120 Hz kijelzőn is max ~60 fps – feleannyi terhelés
         const rawDt = (now - lastTs) / 1000;
         lastTs = now;
         let dt = Math.min(0.05, Math.max(0.001, rawDt));
         if (state.hitStop > 0) { state.hitStop -= dt; dt *= 0.15; } // "hit-stop": rövid lassítás nagy öléseknél
         state.dt = dt;
+        const live = state.running && !state.paused && !document.hidden;
+        if (skipLag > 0) skipLag--;
+        else if (live && rawDt > 0.12) Dbg.report('W701', Math.round(rawDt * 1000) + ' ms, szörny: ' + state.enemies.length);
         fpsAccum += rawDt;
         fpsFrames++;
         if (fpsAccum >= 0.5) {
           state.fps = Math.round(fpsFrames / fpsAccum);
-          if (!lowQ && state.running && !state.paused && !document.hidden) {
-            lagTicks = state.fps < 38 ? lagTicks + 1 : Math.max(0, lagTicks - 1);
-            if (lagTicks >= 6) { lowQ = true; resizeCanvas(); }
+          Dbg.fps = state.fps;
+          fpsMinWin = Math.min(fpsMinWin, state.fps);
+          if (now - fpsMinT > 5000) { Dbg.fpsMin = fpsMinWin; fpsMinWin = 99; fpsMinT = now; }
+          if (live) {
+            Dbg.lowS = state.fps < 30 ? Dbg.lowS + 0.5 : 0;
+            if (Dbg.lowS >= 3) { Dbg.report('W700', state.fps + ' FPS, szörny: ' + state.enemies.length + ', részecske: ' + state.particles.length); Dbg.lowS = -20; }
+            if (!lowQ && settings.quality === 'auto') {
+              lagTicks = state.fps < 38 ? lagTicks + 1 : Math.max(0, lagTicks - 1);
+              if (lagTicks >= 6) { lowQ = true; resizeCanvas(); Dbg.report('W702', state.fps + ' FPS mellett'); }
+            }
           }
           fpsAccum = 0;
           fpsFrames = 0;
+          updatePerfUi();
         }
-        try { update(dt); render(); } catch (err) { console.error('Game loop error:', err); }
-        requestAnimationFrame(loop);
+        const t0 = performance.now();
+        try { update(dt); } catch (err) { Dbg.report('E200', Dbg.where(err)); }
+        const t1 = performance.now();
+        try { render(); } catch (err) { Dbg.report('E201', Dbg.where(err)); try { ctx = realCtx; } catch (_) {} }
+        const t2 = performance.now();
+        Dbg.tU = Dbg.tU * 0.9 + (t1 - t0) * 0.1; Dbg.tR = Dbg.tR * 0.9 + (t2 - t1) * 0.1; Dbg.ms = Dbg.tU + Dbg.tR;
       }
 
-      if (/[?&]debug\b/.test(location.search)) window.__c1k = { state, spawnEnemy, startWave, triggerJumpScare, selectWeapon, explodeAt, WEAPONS };
+      // ---------- v13: FPS-mérő és hibakereső panel ----------
+      const fpsEl = document.getElementById('fps-meter');
+      function updatePerfUi() {
+        if (fpsEl) {
+          fpsEl.style.display = settings.fps ? '' : 'none';
+          if (settings.fps) {
+            fpsEl.textContent = `${state.fps} FPS · ${Dbg.ms.toFixed(1)} ms`;
+            fpsEl.className = state.fps >= 50 ? 'good' : state.fps >= 30 ? 'mid' : 'bad';
+            const errs = Dbg.log.filter(x => x.code[0] === 'E').length;
+            if (errs) fpsEl.textContent += ` · ⚠${errs}`;
+          }
+        }
+        if (!Dbg.open) return;
+        const q = settings.quality === 'auto' ? (lowQ ? 'AUTO (alacsony)' : 'AUTO (magas)') : settings.quality === 'high' ? 'MAGAS' : 'ALACSONY';
+        document.getElementById('dg-stats').innerHTML =
+          `<b class="${state.fps >= 50 ? 'g' : state.fps >= 30 ? 'y' : 'r'}">${state.fps} FPS</b> (5 mp min: ${Dbg.fpsMin || '–'}) · képkocka ${Dbg.ms.toFixed(1)} ms<br/>` +
+          `logika ${Dbg.tU.toFixed(1)} ms · rajzolás ${Dbg.tR.toFixed(1)} ms<br/>` +
+          `pálya ${state.width}×${state.height} · pixel ${PX}× · minőség: ${q}<br/>` +
+          `szörny <b>${state.enemies.length}</b> · lövedék ${state.projectiles.length + state.enemyProjectiles.length} · részecske ${state.particles.length}<br/>` +
+          `cafat ${state.gibs.length} · tetem ${state.corpses.length} · zsákmány ${state.pickups.length} · fény ${state.lights.length}` +
+          (performance.memory ? `<br/>memória ${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB` : '');
+        const qb = document.getElementById('dg-quality'); if (qb) qb.textContent = 'MINŐSÉG: ' + (settings.quality === 'auto' ? 'AUTO' : settings.quality === 'high' ? 'MAGAS' : 'ALACSONY');
+      }
+      function setDebugOpen(on) {
+        Dbg.open = on; state.showDiag = on;
+        document.getElementById('diag-box').classList.toggle('show', on);
+        if (on) {
+          Dbg.renderLog(); updatePerfUi();
+          document.getElementById('dg-codes').innerHTML = Object.entries(Dbg.codes).map(([k, v]) => `<div><b>${k}</b> ${v}</div>`).join('');
+        }
+      }
+      function applyQuality() {
+        if (settings.quality === 'high') lowQ = false;
+        else if (settings.quality === 'low') lowQ = true;
+        lagTicks = 0; resizeCanvas();
+      }
+      if (fpsEl) fpsEl.addEventListener('click', () => setDebugOpen(!Dbg.open));
+      document.getElementById('err-toast').addEventListener('click', () => { document.getElementById('err-toast').classList.remove('show'); setDebugOpen(true); });
+      document.getElementById('dg-close').addEventListener('click', () => setDebugOpen(false));
+      document.getElementById('dg-clear').addEventListener('click', () => { Dbg.log = []; try { localStorage.removeItem('c1k_errlog'); } catch (_) {} Dbg.renderLog(); updatePerfUi(); });
+      document.getElementById('dg-copy').addEventListener('click', () => {
+        const txt = Dbg.text(), b = document.getElementById('dg-copy');
+        const done = () => { b.textContent = '✔ MÁSOLVA'; setTimeout(() => { b.textContent = '📋 MÁSOLÁS'; }, 1500); };
+        try { navigator.clipboard.writeText(txt).then(done, () => { prompt('Hibajelentés:', txt); }); } catch (_) { prompt('Hibajelentés:', txt); }
+      });
+      document.getElementById('dg-quality').addEventListener('click', () => {
+        settings.quality = settings.quality === 'auto' ? 'high' : settings.quality === 'high' ? 'low' : 'auto';
+        saveSettings(); applyQuality(); updatePerfUi();
+      });
+      document.getElementById('dg-stress').addEventListener('click', () => {
+        if (!state.running || state.gameOver) { Dbg.report('W703', 'Stresszteszt csak bevetés közben indítható'); return; }
+        const types = ['swarmer', 'larva', 'stalker', 'lurker', 'bomber', 'spitter', 'brute', 'wraith'];
+        for (let i = 0; i < 100; i++) { const e = spawnEnemy(types[i % types.length]); e.x = state.width * 0.55 + Math.random() * state.width * 0.6; }
+      });
+      canvas.addEventListener('contextlost', () => Dbg.report('E600', 'contextlost'));
+      buf.addEventListener('contextlost', () => Dbg.report('E600', 'contextlost (puffer)'));
+      window.addEventListener('keydown', e => { if (e.code === 'F3' || e.code === 'Backquote') { e.preventDefault(); setDebugOpen(!Dbg.open); } });
+
+      if (/[?&]debug\b/.test(location.search)) window.__c1k = { state, Dbg, decalCv, spawnEnemy, paintSplat, startWave, triggerJumpScare, selectWeapon, explodeAt, WEAPONS };
+      if (settings.quality === 'low') lowQ = true;
       resizeCanvas();
       initMenus();
       updateHud();
+      updatePerfUi();
       requestAnimationFrame(loop);
     })();
   </script>
