@@ -3026,6 +3026,309 @@ canvas#gameCanvas{cursor:crosshair}
         AudioEngine.playStinger(); triggerShake(7, 0.3); buzz(120);
       }
 
+      // ===================== v18 GUSZTUSTALANSÁG & VÁRATLAN FORDULATOK =====================
+      // Minden effekt olcsó (pár téglalap / meglévő részecske-, cafat- és decal-rendszer), és state.heavy alatt kimarad vagy erősen korlátozott.
+      const GUT_SPRITES = (() => { // feltekeredett belek – egyszer rajzolva, a meglévő sprite-cafat (img) útvonalon repülnek és beégnek a padlóba
+        const out = [];
+        for (let v = 0; v < 3; v++) {
+          const c = document.createElement('canvas'); c.width = 14; c.height = 8; const g = c.getContext('2d');
+          for (let i = 0; i < 12; i++) { const x = 1 + i, y = 3 + Math.round(Math.sin(i * (0.9 + v * 0.35) + v) * 2.2); g.fillStyle = '#4a0a14'; g.fillRect(x, y - 1, 2, 4); g.fillStyle = i % 3 ? '#c46a78' : '#a8475a'; g.fillRect(x, y, 2, 2); if (i % 2) { g.fillStyle = '#f2b0b8'; g.fillRect(x, y, 1, 1); } }
+          out.push(c);
+        }
+        return out;
+      })();
+      const PUS_TYPES = { bloat: 4, carrier: 3, spitter: 2, snail: 3, tower: 3, twin: 2, brute: 2 };
+      function goreArr(k) { return state[k] || (state[k] = []); }
+      function spawnGuts(x, y, n, dir, blood) {
+        const ft = floorTopY(), fb = floorBotY();
+        for (let i = 0; i < n; i++) {
+          const img = GUT_SPRITES[(Math.random() * 3) | 0], gy = clamp(y + (Math.random() - 0.3) * 16, ft, fb + 6);
+          state.gibs.push({ img, sx: 0, sy: 0, sw: img.width, sh: img.height, x, gy, z: 14 + Math.random() * 14, vz: 140 + Math.random() * 200, vx: dir * (50 + Math.random() * 170) + (Math.random() - 0.5) * 80, vg: (Math.random() - 0.5) * 60, b: 0, c: blood, s: 6 });
+        }
+        while (state.gibs.length > gibCap()) bakeGib(state.gibs.shift());
+      }
+      // Bélsár, hányás, epe: sugárban kilövellő részecskék + tócsa a padlón
+      function goreVomit(e, n = 7) {
+        if (state.particles.length > pCap() * 0.8) return;
+        const mx = e.x - e.hw * 0.55, my = e.y - e.hh * 0.35, cnt = state.heavy ? 2 : n;
+        for (let i = 0; i < cnt; i++) state.particles.push({ x: mx, y: my, vx: -(90 + Math.random() * 150), vy: -30 + Math.random() * 60, life: 0.55, maxLife: 0.55, color: i % 3 ? '#9cb52a' : '#d8d36a', size: 2 + Math.random() * 3, gravity: 560 });
+        if (!state.heavy) paintSplat(mx - 30 - Math.random() * 20, e.y + e.foot * 0.8, 'rgba(120,140,30,.55)', 9, -1);
+      }
+      // Sebesült szörny: artériás lüktető vérsugár, kilógó belek nyoma, kipukkanó gennyhólyagok, hányó Puffadt Hulla
+      function goreEnemy(e, dt) {
+        const r = e.hp / e.maxHp, bl = bloodOf(e);
+        if (r < 0.35 && !e.isBoss) {
+          e.artT = (e.artT == null ? Math.random() * 0.4 : e.artT) - dt;
+          if (e.artT <= 0 && state.particles.length < pCap() * 0.75) {
+            e.artT = 0.32 + Math.random() * 0.3;
+            const wx = e.x - e.hw * 0.2, wy = e.y - e.hh * 0.24, pw = 150 + Math.random() * 90;
+            for (let i = 0; i < 5; i++) state.particles.push({ x: wx, y: wy, vx: pw * (0.6 + i * 0.12), vy: -(120 + Math.random() * 60) + i * 14, life: 0.6, maxLife: 0.6, color: i % 2 ? bl : '#c0182a', size: 2 + (i % 3), gravity: 620 });
+            addDecal(wx + 40 + Math.random() * 30, e.y + e.foot * 0.8, bl, 5);
+          }
+          if (r < 0.3 && Math.random() < dt * 9) { dctx.fillStyle = bl; dctx.fillRect(e.x + 2, e.y + e.foot * 0.82 + (Math.random() - 0.5) * 3, 5 + Math.random() * 6, 2); } // bélnyom-csík a padlón
+        }
+        const np = PUS_TYPES[e.typeKey];
+        if (np) {
+          if (e.hitFlash > 0.08 && !e._hfSeen) {
+            e._hfSeen = true;
+            if (Math.random() < 0.3 && (e.pusPop || 0) < (1 << np) - 1) {
+              let k = 0; while ((e.pusPop || 0) & (1 << k)) k++;
+              e.pusPop = (e.pusPop || 0) | (1 << k);
+              const px = e.x + (((e.seed * (k + 3) * 7.31) % 1) - 0.5) * e.hw * 1.1, py = e.y - e.hh * (0.1 + ((e.seed * (k + 1) * 3.7) % 1) * 0.6);
+              spawnParticles(px, py, 7, '#d8d36a', 40, 170, 0.4, 3, { gravity: 380 });
+              spawnParticles(px, py, 3, '#f4f0c0', 20, 90, 0.3, 2, { gravity: 300 });
+              addDecal(px + 6, e.y + e.foot * 0.8, 'rgba(170,160,60,.55)', 7);
+            }
+          } else if (e.hitFlash <= 0.05) e._hfSeen = false;
+        }
+        if (e.typeKey === 'bloat' && e.x < state.width - 40) {
+          if (e.vomT > 0) { e.vomT -= dt; if (Math.random() < dt * 30) goreVomit(e, 3); }
+          else if (Math.random() < dt * 0.22) { e.vomT = 0.7; AudioEngine.playSpit('acid'); }
+        }
+      }
+      // Halál-változatok: lefejezés (repülő fej + nyaki vérszökőkút) vagy kettéhasadás, belek, vér a barikádon / a képernyő szélén
+      function dismember(e, sp, dir, blood) {
+        if (e.isBoss || Math.random() > (state.heavy ? 0.06 : 0.3)) return false;
+        const ft = floorTopY(), fb = floorBotY(), x0 = e.x - sp.width / 2, y0 = e.y - sp.height * 0.55;
+        const gy = clamp(e.y + e.foot * 0.7, ft, fb + 6), W = sp.width, H = sp.height;
+        const mk = (sx, sy, sw, sh, vx, vz, ox = 0) => { const cy = y0 + sy + sh / 2; const g = { img: sp, sx, sy, sw, sh, x: x0 + sx + sw / 2 + ox, gy, z: Math.max(0, gy - cy), vz, vx, vg: (Math.random() - 0.5) * 40, b: 0, c: blood, s: Math.max(sw, sh) / 2 }; state.gibs.push(g); return g; };
+        if (Math.random() < 0.55) { // LEFEJEZÉS
+          const hT = Math.round(H * 0.38);
+          mk(0, 0, W, hT, dir * (60 + Math.random() * 90) + 40, 330 + Math.random() * 160);
+          const body = mk(0, hT, W, H - hT, dir * 20, 50);
+          if (goreArr('fountains').length < 10) state.fountains.push({ g: body, t: 0.9, c: blood });
+          if (!state.heavy && Math.random() < 0.35) addFloatingText(e.x, e.y - e.hh - 16, 'LEFEJEZVE!', '#fb7185', 0.9, 12);
+        } else { // KETTÉHASADÁS
+          const hw = Math.round(W / 2);
+          mk(0, 0, hw, H, -(90 + Math.random() * 80), 130, -2);
+          mk(hw, 0, W - hw, H, 90 + Math.random() * 80, 130, 2);
+          spawnGuts(e.x, e.y + e.foot * 0.6, state.heavy ? 1 : 3, dir, blood);
+          spawnParticles(e.x, e.y - e.hh * 0.2, 14, blood, 40, 220, 0.55, 4, { gravity: 520 });
+          if (!state.heavy && Math.random() < 0.35) addFloatingText(e.x, e.y - e.hh - 16, 'KETTÉHASADT!', '#fb7185', 0.9, 12);
+        }
+        while (state.gibs.length > gibCap()) bakeGib(state.gibs.shift());
+        return true;
+      }
+      function goreDeath(e, dir, overkill, blood) {
+        if (!state.heavy || Math.random() < 0.25) spawnGuts(e.x, e.y + e.foot * 0.5, e.isBoss ? 8 : (e.radius >= 24 ? 3 : 1 + (Math.random() < 0.5 ? 1 : 0)), dir, blood);
+        const barX = getBarricadeX(), nearBar = e.x - barX < 70;
+        if (nearBar && state.barricadeHp > 0) { const bb = goreArr('barBlood'); bb.push({ y: e.y - e.hh * 0.3 + (Math.random() - 0.5) * 20, s: 4 + Math.random() * 5, c: blood, life: 22, drip: 0 }); if (bb.length > 26) bb.shift(); }
+        if (nearBar || Math.hypot(e.x - state.player.x, e.y - state.player.y) < 110 || (overkill && e.x - barX < 140)) {
+          const sb = goreArr('scrBlood');
+          if (sb.length < 6 && (!state.heavy || sb.length < 2)) sb.push({ side: Math.random() < 0.5 ? 0 : (Math.random() < 0.5 ? 1 : 2), p: 0.1 + Math.random() * 0.8, s: 8 + Math.random() * 10, c: blood, life: 3.2, max: 3.2, seed: Math.random() * 10 });
+        }
+      }
+
+      // ---------- Váratlan fordulatok (ritka, napokkal skálázódó, előre jelzett) ----------
+      const TWIST_TXT = {
+        rise: ['☠ A HALOTTAK NEM NYUGSZANAK', 'Az egyik tetem megrándult. Láttam. Esküszöm, láttam.'],
+        parasite: ['☣ PARAZITÁK! VALAMI KIKEL BELŐLE', 'A bőre alatt valami mozog... és ki akar jönni.'],
+        vent: ['⚠ MOZGÁS A SZELLŐZŐBEN', 'Kaparás a plafonban. A rács kidudorodik...'],
+        flicker: ['‼ VALAMI KÖZELEBB JÖTT', 'Egy pillanatra kialudt a fény. Amikor visszajött, már ott állt.'],
+        pile: ['☣ A HULLAKUPAC MOZOG', 'A tetemek rángatóznak. Kukacok. Ezernyi kukac.']
+      };
+      function twistLine(t) { const el = document.getElementById('story-line'); if (!el) return; el.textContent = t; el.classList.add('show'); state.storyTimer = 4.5; }
+      function twistAnnounce(k) { showWaveBanner(TWIST_TXT[k][0]); twistLine(TWIST_TXT[k][1]); state.fear = Math.min(100, state.fear + 8); }
+      function monsterSideCorpses() { const bx = getBarricadeX() + 60; return state.corpses.filter(c => c.x > bx && c.x < state.width - 10 && c.tk && c.tk !== 'boss' && !(c.rise > 0) && c.life > 2.5); }
+      function twistCandidate(minX, notLarva) { let best = null; for (const e of state.enemies) { if (e.hp <= 0 || e.isBoss || e.twBurst > 0 || (notLarva && e.typeKey === 'larva') || e.x < minX || e.x > state.width - 30) continue; if (!best || e.x > best.x) best = e; } return best; }
+      function forceTwist(kind) {
+        const barX = getBarricadeX(), d = state.wave;
+        if (kind === 'rise') {
+          const cs = monsterSideCorpses(); if (!cs.length) return false;
+          const cp = cs[(Math.random() * cs.length) | 0]; cp.rise = 1.6; cp.life = Math.max(cp.life, 4);
+          twistAnnounce('rise'); AudioEngine.playMonsterGrowl(); return true;
+        }
+        if (kind === 'parasite') {
+          const e = twistCandidate(barX + 120, true); if (!e) return false;
+          e.twBurst = 1.4; e.twN = Math.min(6, 3 + Math.floor(d / 6));
+          twistAnnounce('parasite'); AudioEngine.playMonsterGrowl(); return true;
+        }
+        if (kind === 'vent') {
+          const x = barX + 150 + Math.random() * Math.max(40, state.width * 0.78 - barX - 150);
+          goreArr('vents').push({ x, t: 1.8, n: Math.min(5, 2 + Math.floor(d / 6)), done: 0 });
+          twistAnnounce('vent'); AudioEngine.playTone(140, 90, 0.5, 'sawtooth', 0.04); return true;
+        }
+        if (kind === 'flicker') {
+          const e = twistCandidate(barX + 280, false); if (!e) return false;
+          state.flickT = Math.max(state.flickT || 0, 0.7); state.twFlick = { e, t: 0.35 }; return true;
+        }
+        if (kind === 'pile') {
+          const cs = monsterSideCorpses(); if (cs.length < 2) return false;
+          state.pileT = 2.4; state.pileN = Math.min(3, 1 + Math.floor(d / 8));
+          twistAnnounce('pile'); AudioEngine.playWhisper(); return true;
+        }
+        return false;
+      }
+      function twistUpdate(dt) {
+        if (state.kills < (state._twKills || 0) || state._twDay == null) { // új játék: minden függő fordulat törlődik
+          state._twDay = -1; state.vents = []; state.fountains = []; state.worms = []; state.barBlood = []; state.scrBlood = []; state.pileT = 0; state.twFlick = null;
+        }
+        state._twKills = state.kills;
+        if (state._twDay !== state.wave) { state._twDay = state.wave; state.twBudget = state.wave < 2 ? 0 : Math.min(5, 1 + Math.floor(state.wave / 4)); state.twCd = 16 + Math.random() * 18; }
+        const barX = getBarricadeX();
+        // ütemező – ritka, a napokkal sűrűsödő fordulatok (boss alatt, áramszünet-előkészítésnél és nagy tömegben szünetel)
+        state.twCd -= dt;
+        if (state.twCd <= 0 && state.twBudget > 0) {
+          state.twCd = (30 + Math.random() * 30) * Math.max(0.55, 1 - state.wave * 0.02);
+          if (state.enemies.length <= 60 && !state.enemies.some(e => e.isBoss) && !(state.blackoutPre > 0)) {
+            const opts = ['rise', 'rise'];
+            if (state.wave >= 3) opts.push('parasite', 'parasite');
+            if (state.wave >= 4) opts.push('vent', 'vent');
+            if (state.wave >= 2 && settings.scares) opts.push('flicker');
+            if (state.wave >= 5) opts.push('pile');
+            for (let tries = 0; tries < 4; tries++) { const k = opts[(Math.random() * opts.length) | 0]; if (forceTwist(k)) { state.twBudget--; break; } }
+          }
+        }
+        // feltámadó tetem
+        for (let i = state.corpses.length - 1; i >= 0; i--) {
+          const cp = state.corpses[i]; if (!(cp.rise > 0)) continue;
+          cp.rise -= dt;
+          if (Math.random() < dt * 8) spawnParticles(cp.x, cp.y + cp.r * 0.6, 2, '#5a0e16', 20, 70, 0.3, 2, { gravity: 300 });
+          if (cp.rise <= 0) {
+            state.corpses.splice(i, 1);
+            const e = spawnEnemy(cp.tk); e.x = cp.x; e.y = clampEnemyY(e, cp.y); e.age = 0.25; e.risen = true;
+            e.hp = e.maxHp = Math.max(1, Math.round(e.maxHp * 0.5)); e.reward = Math.max(1, Math.floor(e.reward * 0.5));
+            AudioEngine.playScream(); triggerShake(3, 0.2);
+            spawnParticles(cp.x, cp.y, 12, '#8a0f1c', 40, 200, 0.5, 4, { gravity: 480 });
+            addFloatingText(cp.x, cp.y - 40, 'FELTÁMADT!', '#ff5a66', 1.2, 13);
+            if (settings.scares) bark('fear', true);
+          }
+        }
+        // szellőző: előbb rács-dudor és vércsepegés, aztán kiesnek a lények – mindig a szörny-oldalon
+        const vs = state.vents || [];
+        for (let i = vs.length - 1; i >= 0; i--) {
+          const v = vs[i]; v.t -= dt;
+          if (v.t > 0 && Math.random() < dt * 10 && state.particles.length < pCap()) state.particles.push({ x: v.x + (Math.random() - 0.5) * 14, y: floorTopY() - 8, vx: 0, vy: 20, life: 0.9, maxLife: 0.9, color: '#8a0f1c', size: 2, gravity: 300 });
+          if (v.t <= 0 && !v.done) {
+            v.done = 1; AudioEngine.playSplat(true); AudioEngine.playMonsterGrowl(); triggerShake(3, 0.2);
+            const pool = state.wave >= 7 ? ['swarmer', 'spider', 'stalker'] : ['swarmer', 'larva', 'stalker'];
+            for (let k = 0; k < v.n; k++) { const e = spawnEnemy(pool[(Math.random() * pool.length) | 0]); e.x = Math.max(barX + 120, v.x + (k - v.n / 2) * 18); e.y = clampEnemyY(e, floorTopY() + 30 + Math.random() * 60); e.dropZ = 70 + k * 12; e.age = 0.3; }
+            spawnGibs({ x: v.x, y: floorTopY() + 20, radius: 12, hh: 40, foot: 10 }, state.heavy ? 2 : 6, '#8a0f1c');
+          }
+          if (v.t < -6) vs.splice(i, 1);
+        }
+        // villódzás + közelebb teleportálás
+        if (state.twFlick) {
+          const f = state.twFlick; f.t -= dt;
+          if (f.t <= 0) {
+            state.twFlick = null;
+            const e = f.e;
+            if (e && e.hp > 0) {
+              addDecal(e.x, e.y + e.foot * 0.8, '#3a0610', 10);
+              e.x = Math.max(barX + 110 + e.hw, state.player.x + 180); e.y = clampEnemyY(e, state.player.y + (Math.random() - 0.5) * 60); e.kx = 0;
+              twistAnnounce('flicker'); AudioEngine.playStinger(); triggerShake(4, 0.25); buzz(60);
+              state.flickT = Math.max(state.flickT || 0, 0.25);
+            }
+          }
+        }
+        // hullakupac: rángatózó tetemek, kukacok, végül egy kipukkad és lárvák másznak ki
+        if (state.pileT > 0) {
+          state.pileT -= dt;
+          if (!state.heavy && Math.random() < dt * 20) { const cs = state.corpses; if (cs.length) { const c = cs[(Math.random() * cs.length) | 0]; spawnWorm(c.x, c.y + c.r * 0.6); } }
+          if (state.pileT <= 0) {
+            const cs = monsterSideCorpses();
+            if (cs.length) {
+              const c = cs[(Math.random() * cs.length) | 0]; state.corpses.splice(state.corpses.indexOf(c), 1);
+              AudioEngine.playSplat(true);
+              spawnGibs({ x: c.x, y: c.y, radius: 16, hh: 10, foot: c.r }, state.heavy ? 3 : 8, '#8a0f1c');
+              spawnGuts(c.x, c.y + c.r * 0.5, 2, 1, '#8a0f1c');
+              for (let k = 0; k < (state.pileN || 1); k++) { const l = spawnEnemy('larva'); l.x = Math.max(barX + 80, c.x + (k - 1) * 14); l.y = clampEnemyY(l, c.y + (k - 1) * 10); l.age = 0.3; }
+            }
+          }
+        }
+      }
+      function spawnWorm(x, y) { const w = goreArr('worms'); if (w.length < 50) w.push({ x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 6, vx: (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 6), life: 3 + Math.random() * 3, ph: Math.random() * 6 }); }
+      function goreUpdate(dt) {
+        const fo = state.fountains;
+        if (fo) for (let i = fo.length - 1; i >= 0; i--) {
+          const f = fo[i]; f.t -= dt; if (f.t <= 0) { fo.splice(i, 1); continue; }
+          if (state.particles.length < pCap() * 0.8) { const g = f.g, nx = g.x, ny = g.gy - g.z - g.sh * 0.45; for (let k = 0; k < (state.heavy ? 1 : 2); k++) state.particles.push({ x: nx + (Math.random() - 0.5) * 4, y: ny, vx: (Math.random() - 0.5) * 70, vy: -(160 + Math.random() * 140) * f.t, life: 0.5, maxLife: 0.5, color: Math.random() < 0.6 ? f.c : '#c0182a', size: 2 + Math.random() * 2, gravity: 640 }); }
+        }
+        const w = state.worms;
+        if (w) {
+          if (!state.heavy) for (const c of state.corpses) if (Math.random() < dt * 0.5) spawnWorm(c.x, c.y + c.r * 0.6);
+          for (let i = w.length - 1; i >= 0; i--) { const q = w[i]; q.life -= dt; q.ph += dt * 9; q.x += q.vx * dt * (0.5 + 0.5 * Math.abs(Math.sin(q.ph))); if (q.life <= 0) w.splice(i, 1); }
+        }
+        if (state.barBlood) for (let i = state.barBlood.length - 1; i >= 0; i--) { const b = state.barBlood[i]; b.life -= dt; b.drip = Math.min(40, b.drip + dt * 9); if (b.life <= 0 || state.barricadeHp <= 0) state.barBlood.splice(i, 1); }
+        if (state.scrBlood) for (let i = state.scrBlood.length - 1; i >= 0; i--) { const s = state.scrBlood[i]; s.life -= dt; if (s.life <= 0) state.scrBlood.splice(i, 1); }
+        if (state.pileT > 0 || state.corpses.some(c => c.rise > 0)) for (const c of state.corpses) c.tw = (state.pileT > 0 || c.rise > 0) ? 1 : 0;
+        else for (const c of state.corpses) c.tw = (!state.heavy && Math.random() < dt * 0.4) ? 1 : (c.tw > 0 ? c.tw - dt * 6 : 0); // a halottak néha még rándulnak egyet
+      }
+      // ---- rajzolás (pufferre, pixel-téglalapok) ----
+      function drawWorms() {
+        const w = state.worms; if (!w || !w.length) return;
+        for (const q of w) {
+          ctx.globalAlpha = Math.min(1, q.life);
+          for (let s = 0; s < 3; s++) { ctx.fillStyle = s ? '#d8cfa8' : '#f4ecd0'; ctx.fillRect(Math.round(q.x - Math.sign(q.vx) * s * 2), Math.round(q.y + Math.sin(q.ph + s * 1.4) * 1.2), 2, 2); }
+        }
+        ctx.globalAlpha = 1;
+      }
+      function drawBarBlood(barX) {
+        const bb = state.barBlood; if (!bb || !bb.length || state.barricadeHp <= 0) return;
+        for (const b of bb) {
+          ctx.globalAlpha = Math.min(0.9, b.life / 4);
+          ctx.fillStyle = b.c; ctx.fillRect(barX + 1, Math.round(b.y - b.s / 2), Math.round(b.s * 1.4), Math.round(b.s));
+          ctx.fillRect(barX + 3, Math.round(b.y), 2, Math.round(b.drip)); ctx.fillRect(barX + 7, Math.round(b.y), 2, Math.round(b.drip * 0.6));
+          ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(barX + 2, Math.round(b.y - b.s / 2), 2, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
+      function drawVents() {
+        const vs = state.vents; if (!vs || !vs.length) return;
+        const y = floorTopY() - 22;
+        for (const v of vs) {
+          const x = Math.round(v.x), shake = v.t > 0 ? Math.round(Math.sin(state.time * 50) * 1.5) : 0, open = v.t <= 0;
+          ctx.fillStyle = '#05020a'; ctx.fillRect(x - 15, y - 2, 30, 14);
+          if (!open) { ctx.fillStyle = '#4a4f55'; for (let k = 0; k < 4; k++) ctx.fillRect(x - 13 + shake, y + k * 3 + (k === 1 ? 1 : 0), 26, 2); ctx.fillStyle = '#ff2a2a'; if (Math.sin(state.time * 6) > 0) { ctx.fillRect(x - 6, y + 4, 2, 2); ctx.fillRect(x + 4, y + 4, 2, 2); } }
+          else { ctx.fillStyle = '#4a4f55'; ctx.fillRect(x - 14, y + 10, 3, 14); ctx.fillStyle = '#5a0e16'; ctx.fillRect(x - 6, y + 10, 3, 6); ctx.fillRect(x + 5, y + 10, 2, 9); }
+        }
+      }
+      function drawScreenBlood() {
+        const sb = state.scrBlood; if (!sb || !sb.length) return;
+        const W = state.width, H = state.height, ox = -(state.shx || 0), oy = -(state.shy || 0);
+        for (const s of sb) {
+          ctx.globalAlpha = Math.min(0.85, s.life / s.max * 1.6);
+          ctx.fillStyle = s.c;
+          const cx = s.side === 0 ? 0 : s.p * W, cy = s.side === 0 ? s.p * H * 0.8 + H * 0.1 : (s.side === 1 ? 0 : H);
+          for (let k = 0; k < 7; k++) { const a = s.seed * (k + 1) * 2.1, rr = s.s * ((k * 0.37 + s.seed) % 1), sz = 4 + ((k * 5 + s.seed * 3) % 6); ctx.fillRect(Math.round(cx + Math.abs(Math.cos(a)) * rr * (s.side === 0 ? 1 : Math.sign(Math.cos(a))) + ox), Math.round(cy + Math.sin(a) * rr * (s.side === 2 ? -1 : 1) * (s.side ? 0.6 : 1) + oy), sz, sz); }
+          if (s.side !== 2) { const dl = (s.max - s.life) * 14; ctx.fillRect(Math.round(cx + 2 + ox), Math.round(cy + oy), 2, Math.round(s.s * 0.6 + dl)); }
+        }
+        ctx.globalAlpha = 1;
+      }
+      // szörnyre rajzolt plusz-gore (sprite-koordinátákban; csak könnyű terhelésnél)
+      function drawEnemyGore(e, sp, dx, dy) {
+        const r = e.hp / e.maxHp, W = sp.width, H = sp.height;
+        const np = PUS_TYPES[e.typeKey] || (r < 0.5 && !e.isBoss ? 1 : 0);
+        for (let k = 0; k < np; k++) { // lüktető gennyhólyagok
+          const px = Math.round(dx + W * (0.3 + ((e.seed * (k + 3) * 7.31) % 1) * 0.4)), py = Math.round(dy + H * (0.3 + ((e.seed * (k + 1) * 3.7) % 1) * 0.35));
+          if ((e.pusPop || 0) & (1 << k)) { ctx.fillStyle = '#3a0610'; ctx.fillRect(px - 1, py - 1, 3, 3); ctx.fillStyle = '#c0182a'; ctx.fillRect(px, py + 2, 1, 2); continue; }
+          const s = 2 + (Math.sin(state.time * 4 + e.seed + k * 1.7) > 0.3 ? 1 : 0);
+          ctx.fillStyle = '#2a1a08'; ctx.fillRect(px - 1, py - 1, s + 2, s + 2);
+          ctx.fillStyle = '#d8c84a'; ctx.fillRect(px, py, s, s); ctx.fillStyle = '#fff6c0'; ctx.fillRect(px, py, 1, 1);
+        }
+        if (r < 0.3 && !e.isBoss) { // kilógó, lengő belek
+          const bx = dx + W * 0.42, by = dy + H * 0.52, len = Math.max(4, Math.round(H * 0.32));
+          for (let i = 0; i < len; i += 2) { const sx = Math.round(bx + Math.sin(state.time * 6 + e.seed + i * 0.4) * (i * 0.25) + i * 0.15); ctx.fillStyle = '#4a0a14'; ctx.fillRect(sx - 1, Math.round(by + i), 4, 3); ctx.fillStyle = i % 4 ? '#c46a78' : '#e89aa4'; ctx.fillRect(sx, Math.round(by + i), 2, 2); }
+        }
+        if (e.twBurst > 0) { // parazita-duzzanat: hullámzó bőr, kitüremkedő dudorok
+          const k = 1 - e.twBurst / 1.4;
+          ctx.globalAlpha = 0.25 + 0.35 * k * (0.5 + 0.5 * Math.sin(state.time * 30));
+          ctx.drawImage(silhouette(sp, '#c9d86a'), dx - k * 2, dy - k * 2, W + k * 4, H + k * 4);
+          ctx.globalAlpha = 1;
+          for (let i = 0; i < 4; i++) { const px = Math.round(dx + W * (0.25 + 0.5 * ((i * 0.37 + state.time * 1.7) % 1))), py = Math.round(dy + H * (0.3 + 0.12 * i)); ctx.fillStyle = '#e8b0a0'; ctx.fillRect(px, py, 3 + Math.round(k * 2), 3); ctx.fillStyle = '#5a0e16'; ctx.fillRect(px + 1, py + 1, 1, 1); }
+        }
+        if (e.risen) { ctx.globalAlpha = 0.28; ctx.drawImage(silhouette(sp, '#2a0006'), dx, dy, W, H); ctx.globalAlpha = 1; }
+      }
+      function parasiteBurst(e) {
+        const n = e.twN || 3, bl = bloodOf(e);
+        AudioEngine.playSplat(true); AudioEngine.playScream(); triggerShake(4, 0.25);
+        spawnParticles(e.x, e.y - e.hh * 0.3, 20, '#c9d86a', 60, 260, 0.6, 4, { gravity: 480 });
+        spawnGuts(e.x, e.y + e.foot * 0.5, 3, 1, bl);
+        for (let k = 0; k < n; k++) { const l = spawnEnemy('larva'); l.x = e.x + (k - n / 2) * 10; l.y = clampEnemyY(l, e.y + (k - n / 2) * 12); l.kx = 40 + Math.random() * 80; l.age = 0.3; }
+        damageEnemy(e, 99999, false, { dot: true });
+      }
+      setTimeout(() => { if (window.__c1k) Object.assign(window.__c1k, { forceTwist, goreDeath, dismember }); }, 0);
+
       // ---------- Fegyverek ----------
       // v18: négy fejlesztési ág fegyverenként – tűzgyorsaság (20), sebzés (20), hűtés (10), kritikus (10); fél úton MESTER, maxon LEGENDA
       const UP_DEFS = [
@@ -3303,11 +3606,13 @@ canvas#gameCanvas{cursor:crosshair}
         if (enemy.isBoss || ((overkill || Math.random() < 0.4) && (!state.heavy || Math.random() < 0.35))) {
           shatterSprite(enemy, sp, dir, overkill ? 1.35 : 1, blood);
           if (overkill && !enemy.isBoss) addFloatingText(enemy.x, enemy.y - enemy.hh - 16, 'SZÉTLOCCSANT!', '#fb7185', 0.9, 13);
+        } else if (dismember(enemy, sp, dir, blood)) { // v18: lefejezés / kettéhasadás
         } else {
-          state.corpses.push({ sp, x: enemy.x, y: enemy.y, r: enemy.foot * 0.85, life: dryCfg().corpse });
+          state.corpses.push({ sp, x: enemy.x, y: enemy.y, r: enemy.foot * 0.85, life: dryCfg().corpse, tk: enemy.typeKey });
           if (state.corpses.length > 24) state.corpses.shift();
         }
         spawnGibs(enemy, enemy.isBoss ? 40 : (state.heavy ? (big ? 6 : 3) : (big ? 16 : 9)), blood, dir);
+        goreDeath(enemy, dir, overkill, blood); // v18: belek, vér a barikádon / a képernyő szélén
         spawnParticles(enemy.x, enemy.y, 22, blood, 60, 320, 0.6, 5, { gravity: 500 });
         spawnParticles(enemy.x, enemy.y, enemy.isBoss ? 40 : 12, enemy.accent || '#84cc16', 55, 260, 0.5, 4.5);
         if (big) state.hitStop = Math.max(state.hitStop, enemy.isBoss ? 0.3 : 0.05);
@@ -3364,6 +3669,7 @@ canvas#gameCanvas{cursor:crosshair}
         const type = enemy.spitType;
         if (!type) return;
         AudioEngine.playSpit(type);
+        if (type === 'acid') goreVomit(enemy, 6); // v18: epés hányás a köpéssel
         const dx = (state.player.x + 10) - enemy.x;
         const dy = state.player.y - enemy.y;
         const dist = Math.max(1, Math.hypot(dx, dy));
@@ -3698,6 +4004,7 @@ canvas#gameCanvas{cursor:crosshair}
         }
 
         directorUpdate(dt);
+        twistUpdate(dt); // v18: váratlan fordulatok
 
         // v14: késői napokon magasabb plafon – 20. napon már ~140 szörny lehet egyszerre a pályán
         const cap = state.wave < 8 ? Math.min(64, 10 + state.wave * 3) : Math.min(200, 34 + (state.wave - 8) * 9);
@@ -3800,6 +4107,9 @@ canvas#gameCanvas{cursor:crosshair}
             if (Math.random() < dt * (state.heavy ? 4 : 14) && state.particles.length < pCap()) state.particles.push({ x: e.x + (Math.random() - 0.5) * e.hw, y: e.y - Math.random() * e.hh, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 50, life: 0.4, maxLife: 0.4, color: e.burn > 0 ? (Math.random() < 0.5 ? '#fb923c' : '#fde047') : '#a3e635', size: 3, glow: true });
             if (e.dotAcc >= 4) { const d = Math.floor(e.dotAcc); e.dotAcc -= d; damageEnemy(e, d, false, { dot: true }); if (e.hp <= 0) continue; }
           }
+          if (e.dropZ) e.dropZ = Math.max(0, e.dropZ - 480 * dt); // v18: szellőzőből lezuhanó lény
+          if (e.twBurst > 0 && (e.twBurst -= dt) <= 0) { parasiteBurst(e); if (e.hp <= 0) continue; }
+          if (!state.heavy) goreEnemy(e, dt);
           const animK = (e.stun > 0 ? 0 : 1) * (e.slow > 0 ? 0.5 : 1) * (e.beh === 'lunge' ? 2 : 1);
           e.animTimer += dt * (e.speed / 22) * animK;
           e.animFrame = Math.floor(e.animTimer) % 4;
@@ -3954,6 +4264,7 @@ canvas#gameCanvas{cursor:crosshair}
         }
 
         updateParticlesAndTexts(dt);
+        goreUpdate(dt);
         updateHud();
       }
 
@@ -4273,13 +4584,16 @@ canvas#gameCanvas{cursor:crosshair}
         }
 
         drawBarricade(getBarricadeX(), floorTop, floorBottom);
+        drawBarBlood(getBarricadeX()); drawVents();
 
         for (const cp of state.corpses) {
-          const ch = cp.sp.height * 0.24;
+          const ch = cp.sp.height * 0.24, tw = cp.tw > 0 ? ((Math.random() * 3) | 0) - 1 : 0; // v18: rángatózó tetem
+          if (tw) { ctx.save(); ctx.translate(tw, cp.rise > 0 ? -((Math.random() * 3) | 0) : 0); }
           ctx.globalAlpha = Math.min(0.85, cp.life / 3);
           ctx.fillStyle = '#5a0e16'; ctx.fillRect(Math.round(cp.x - cp.sp.width * 0.62), Math.round(cp.y + cp.r - ch * 0.4), Math.round(cp.sp.width * 1.24), Math.round(ch * 0.9));
           ctx.drawImage(cp.sp, Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
           ctx.fillStyle = 'rgba(60,0,10,.55)'; ctx.fillRect(Math.round(cp.x - cp.sp.width / 2), Math.round(cp.y + cp.r - ch), cp.sp.width, ch);
+          if (tw) ctx.restore();
         }
         ctx.globalAlpha = 1;
         for (const g of state.gibs) {
@@ -4294,6 +4608,7 @@ canvas#gameCanvas{cursor:crosshair}
           ctx.fillStyle = g.c; ctx.fillRect(g.x - s / 2, gy - s / 2, s, s);
           ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(g.x - s / 2, gy - s / 2, s / 2, s / 3);
         }
+        drawWorms();
         if (state.turretLevel > 0) {
           const tx = getBarricadeX() - 30, ty = state.turretY;
           ctx.fillStyle = '#2b2018'; ctx.fillRect(tx - 2, floorTop, 4, floorBottom - floorTop);
@@ -4331,6 +4646,7 @@ canvas#gameCanvas{cursor:crosshair}
 
         // ---- SÖTÉTSÉG + FÉNYEK: zseblámpa-kúp, torkolattűz, robbanások, égő testek ----
         drawDarkness(w, h);
+        drawScreenBlood(); // v18
 
         for (const rg of state.rings) {
           ctx.globalAlpha = Math.max(0, rg.life / rg.maxLife) * 0.8;
@@ -4694,7 +5010,7 @@ canvas#gameCanvas{cursor:crosshair}
 
       function drawEnemy(e) {
         const sp = getEnemySprite(e.typeKey, e.animFrame);
-        const bob = e.hop ? -e.hop * 16 : 0;
+        const bob = (e.hop ? -e.hop * 16 : 0) - (e.dropZ || 0);
         const br = 1 + Math.sin(state.time * 5 + e.seed * 3) * 0.035;
         const tw = Math.sin(state.time * 31 + e.seed * 7) > 0.97 ? (e.seed % 2 > 1 ? -3 : 3) : 0;
         const dh = sp.height * br;
@@ -4727,6 +5043,7 @@ canvas#gameCanvas{cursor:crosshair}
           ctx.fillStyle = '#d02a3a'; ctx.fillRect(dx + sp.width * 0.4 + 1, dy + sp.height * 0.45 + 1, 4, 3);
           if (e.hp < e.maxHp * 0.25) { ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sp.width * 0.6, dy + sp.height * 0.3, 6, 7); ctx.fillStyle = '#e8dcc4'; ctx.fillRect(dx + sp.width * 0.6 + 1, dy + sp.height * 0.3 + 2, 3, 1); }
         }
+        if (!state.heavy) drawEnemyGore(e, sp, dx, dy); // v18
         if (lean) ctx.restore();
         if (e.typeKey === 'wraith' && !e.lit) e._eyes = null;
         else {
