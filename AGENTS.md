@@ -11,7 +11,7 @@ The current version is the owner's **accepted baseline**. You may change it **on
 - **Gore:** blood, slime, flesh chunks (gibs that bounce and stay on the floor), blood decals.
 - **Monsters:** drawn from horror references – long limbs, exposed ribs, exposed brain, human–monster hybrids (skull faces, faceless, brain-frog, skull-millipede boss).
 - **Gameplay:** left-to-right defense behind a barricade, waves + boss every 5th wave, credits, armor/exosuit tiers, many weapons.
-- **UI:** metal/rust panels, big rounded vivid buttons with hand-drawn SVG icons (owner request, v17), hazard stripes. Hungarian language.
+- **UI:** metal/rust panels, big rounded buttons with hand-drawn SVG icons (v17); top bar is horror-styled and holds ONLY the BOLT (shop) and MENÜ (pause) buttons (v18, owner request) – everything else lives in the creeping dropdown under MENÜ. Hungarian language.
 - **Platform:** landscape mobile-first PWA, offline (service worker), PWABuilder/APK compatible, plus a laptop/desktop layout.
 
 ## Hard rules
@@ -25,7 +25,7 @@ The current version is the owner's **accepted baseline**. You may change it **on
 8. If unsure whether something is an improvement or a change of direction – **leave it as is and ask the owner.**
 
 ## Feature checklist (must remain)
-- 16+ weapons (shotgun … singularity, incl. flamethrower, minigun, rocket launcher, bio cannon, nail gun, saw launcher, chain tesla, napalm mortar) with per-weapon **fire-rate and damage upgrades** (Armory / Fegyvertár), per-weapon projectile kinds and status effects (burn/slow/stun/acid/knockback), visible gun model in the hero's hands
+- 16+ weapons (shotgun … singularity, incl. flamethrower, minigun, rocket launcher, bio cannon, nail gun, saw launcher, chain tesla, napalm mortar) with per-weapon **fire-rate and damage upgrades** (Armory / Fegyvertár; v18: 20/20/10/10 levels, MESTER at half, ⭐⭐ LEGENDA at max), per-weapon projectile kinds and status effects (burn/slow/stun/acid/knockback), visible gun model in the hero's hands
 - **Autonomous machine-gun turret** (4 upgrade levels) in the Barricade & Systems tab
 - Armor tiers, barricade upgrades/repair, cooling, magnet upgrades, heat system
 - 10 enemy types + Leviathan boss, gibs/blood/slime effects, shaded wet-look monster sprites (finishSprite), corpses, glowing eyes, breathing/twitch, wounds
@@ -51,3 +51,6 @@ Better hero sprite, redrawn barricade, boss animations, more monster hybrids, st
 
 - v17 look & feel: **hand-drawn SVG icon sprite** (`#ico-sprite`, `<svg class="ic"><use href="#i-…"/></svg>`, no emoji on buttons), **big rounded vivid buttons** (top bar 54px / 46px on phone, color-coded per function), pad buttons show name + state (AUTO / FEGYVER / GRÁNÁT / ADRENALIN), **press feedback** on every button (press-in, glow ring, short vibration – `v17PressFx`), pause button icon switches ⏸/▶; **organic monster shading** baked once (`shadeOrganic`: rim light, AO, subsurface red, veins, wet specular, outline), walk lean/sway, pulsing eyes, drool drips (all skipped when `state.heavy`)
 - v17 **autonomous test**: `node tests/smoke.mjs` (phone + desktop, start/wave/fire/shop/pause/stress/FPS/errors/HUD button size) – must print `ÖSSZESÍTÉS: PASS` before every merge
+- v18 horror UI: top bar = BOLT + MENÜ only (`#btn-audio`, `#btn-refresh`, `#btn-diag` stay in the DOM but hidden; sound/debugger/refresh are in the dropdown `#pause-screen`, which creeps down under MENÜ, tap outside = resume), horror-styled shop (`#menu-modal`), uniform 2-column upgrade buttons with level bar `n/max`, shop body scrolls by touch (`touch-action:pan-y`) so every upgrade is reachable; **2× upgrade levels** (weapons r/d 20, h/c 10; armor mods p/s/r 20, m 10) with diminishing steps above the old max
+- v18 gore & twists: arterial spurts, drag smears, pustules, bile, intestine gibs, maggots, twitching corpses, dismemberment (head off / split), blood on barricade + screen edges (`goreEnemy`, `drawEnemyGore`, `dismember`, `spawnGuts`, `goreDeath`); rare telegraphed **twists** from day 2 (`twistUpdate`, debug: `__c1k.forceTwist('rise'|'parasite'|'vent'|'flicker'|'pile')`)
+- v18 audio: master compressor+limiter, echo bus, fear-reactive ship drone, metal groans/creaks, wet growls, shrieks, `stinger`, `bossRoar`, gore sounds (`splatter`, `burst`, `deathRattle`, `bodyThud`, `meatSlap`, `slither`, `boneCrack`), a distinct synthesized sound for each of the 26 weapons (rate-limited, weighted voice budget)

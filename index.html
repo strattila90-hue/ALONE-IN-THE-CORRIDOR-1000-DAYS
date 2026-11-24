@@ -3696,17 +3696,17 @@ canvas#gameCanvas{cursor:crosshair}
         if (kind === 'rise') {
           const cs = monsterSideCorpses(); if (!cs.length) return false;
           const cp = cs[(Math.random() * cs.length) | 0]; cp.rise = 1.6; cp.life = Math.max(cp.life, 4);
-          twistAnnounce('rise'); AudioEngine.playMonsterGrowl(); return true;
+          twistAnnounce('rise'); AudioEngine.stinger(0.8); AudioEngine.boneCrack(); AudioEngine.playMonsterGrowl(); return true;
         }
         if (kind === 'parasite') {
           const e = twistCandidate(barX + 120, true); if (!e) return false;
           e.twBurst = 1.4; e.twN = Math.min(6, 3 + Math.floor(d / 6));
-          twistAnnounce('parasite'); AudioEngine.playMonsterGrowl(); return true;
+          twistAnnounce('parasite'); AudioEngine.stinger(0.7); AudioEngine.gurgle(0.9, 70, 0.05); return true;
         }
         if (kind === 'vent') {
           const x = barX + 150 + Math.random() * Math.max(40, state.width * 0.78 - barX - 150);
           goreArr('vents').push({ x, t: 1.8, n: Math.min(5, 2 + Math.floor(d / 6)), done: 0 });
-          twistAnnounce('vent'); AudioEngine.playTone(140, 90, 0.5, 'sawtooth', 0.04); return true;
+          twistAnnounce('vent'); AudioEngine.metalGroan(); AudioEngine.stinger(0.6); return true;
         }
         if (kind === 'flicker') {
           const e = twistCandidate(barX + 280, false); if (!e) return false;
@@ -3715,7 +3715,7 @@ canvas#gameCanvas{cursor:crosshair}
         if (kind === 'pile') {
           const cs = monsterSideCorpses(); if (cs.length < 2) return false;
           state.pileT = 2.4; state.pileN = Math.min(3, 1 + Math.floor(d / 8));
-          twistAnnounce('pile'); AudioEngine.playWhisper(); return true;
+          twistAnnounce('pile'); AudioEngine.playWhisper(); AudioEngine.slither(0.2); return true;
         }
         return false;
       }

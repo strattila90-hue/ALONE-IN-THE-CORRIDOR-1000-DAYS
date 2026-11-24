@@ -42,6 +42,15 @@
   - `ESC`: taktika / bolt menü
 - **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
+## Horror frissítés (v18)
+
+- **Felső sáv:** csak két egyforma, horror stílusú gomb maradt: **BOLT** és **MENÜ**. A MENÜ alól véres, előkúszó lenyíló menü jön elő: folytatás, fegyvertár, hang, beállítások, méret, hibakereső, frissítés, újrakezdés, főmenü. Ha mellé koppintasz, folytatódik a játék.
+- **Horror bolt:** sötét, rozsdás, vérző stílus. A fejlesztőgombok egyformák, mind elérhető (telefonon is görgethető), és mindegyiken látszik egy szintsáv (pl. `7/20`).
+- **2× több fejlesztés:** tűzgyorsaság és sebzés 20 szint, hűtés és kritikus 10 szint. A páncélmodulok 20 szintesek (a szervómotor 10). Fél úton ⭐ MESTER (+15%), maxon ⭐⭐ LEGENDA (+30%).
+- **Több gusztustalanság:** spriccelő artériás vér, vonszolt vércsík, pattanó gennyhólyagok, epehányás, kifolyó belek, nyüvek, rángatózó hullák, leszakadó fej, kettéhasadó test, vér a barikádon és a képernyő szélén.
+- **Váratlan fordulatok** (a 2. naptól, ritkán): feltámadó hulla, parazitákra szétrobbanó szörny, szellőzőből lehulló szörnyek, áramszünetben előreugró szörny, megmozduló hullakupac.
+- **Félelmetesebb hangok:** a félelemmel sötétülő hajózúgás, fémnyikorgás, nedves hörgés, sikolyok, ijesztő hangeffektek a meglepetéseknél, fröccsenés, pukkanás, halálhörgés, csontroppanás, belek hangja. A 26 fegyvernek saját hangja van.
+
 ## Új kinézet (v17)
 
 - **Saját rajzolt ikonok** minden gombon (SVG, offline), emoji helyett.
