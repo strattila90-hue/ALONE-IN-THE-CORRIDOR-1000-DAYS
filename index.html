@@ -1813,8 +1813,61 @@ canvas#gameCanvas{cursor:crosshair}
         return c;
       }
 
-      function finishSprite(small, sc) {
+      // v17: élethűbb, organikus árnyalás (csak sütéskor, CPU-n): távolságmező → térfogat-fény bal-felülről,
+      // alsó árnyék (AO), hús-áttetszőség (vöröses szubszurface a sötét peremen), foltos bőr + erezet,
+      // nedves csillanás, telítettebb hús/nyálka, 1 px sötét körvonal a hiányzó helyeken. Futásidőben nulla költség.
+      function shadeOrganic(small, eyes) {
         const w = small.width, h = small.height, sctx = small.getContext('2d');
+        const img = sctx.getImageData(0, 0, w, h), d = img.data, s0 = new Uint8ClampedArray(d);
+        const N = w * h, D = new Uint8Array(N), keep = new Uint8Array(N);
+        const solid = i => s0[i * 4 + 3] >= 40;
+        const isK = i => s0[i * 4] < 30 && s0[i * 4 + 1] < 14 && s0[i * 4 + 2] < 24;
+        for (const [ex, ey, , es] of eyes) { const r = Math.ceil(es / 2); for (let yy = Math.floor(ey - r); yy <= ey + r; yy++) for (let xx = Math.floor(ex - r); xx <= ex + r; xx++) if (xx >= 0 && yy >= 0 && xx < w && yy < h) keep[yy * w + xx] = 1; }
+        // távolság a körvonaltól (chamfer, 2 menet) – a testek "gömbölyűségéhez"
+        for (let i = 0; i < N; i++) D[i] = solid(i) && !isK(i) ? 9 : 0;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (!D[i]) continue; const a = x > 0 ? D[i - 1] : 0, b = y > 0 ? D[i - w] : 0; D[i] = Math.min(D[i], a + 1, b + 1); }
+        for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const i = y * w + x; if (!D[i]) continue; const a = x < w - 1 ? D[i + 1] : 0, b = y < h - 1 ? D[i + w] : 0; D[i] = Math.min(D[i], a + 1, b + 1); }
+        const Dat = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : D[y * w + x];
+        const hsh = (x, y) => { let n = (x * 374761393 + y * 668265263) | 0; n = (n ^ (n >>> 13)) * 1274126177 | 0; return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+        const noise = (x, y) => { const gx = x / 3, gy = y / 3, x0 = Math.floor(gx), y0 = Math.floor(gy), fx = gx - x0, fy = gy - y0; const a = hsh(x0, y0), b = hsh(x0 + 1, y0), c = hsh(x0, y0 + 1), e = hsh(x0 + 1, y0 + 1); return (a + (b - a) * fx) * (1 - fy) + (c + (e - c) * fx) * fy; };
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = y * w + x, p = i * 4, dd = D[i];
+          if (!dd || keep[i]) continue;
+          let r = s0[p], g = s0[p + 1], b = s0[p + 2];
+          const mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0, lum = (r * 3 + g * 6 + b) / 10;
+          const flesh = r > g * 1.18 && r >= b && sat > 0.18, slime = g > r * 1.15 && g >= b * 0.9 && sat > 0.25, wet = flesh || slime;
+          // felület-normál a távolságmező gradienséből; fény bal-felülről
+          const nx = Dat(x - 1, y) - Dat(x + 1, y), ny = Dat(x, y - 1) - Dat(x, y + 1);
+          const nl = Math.hypot(nx, ny) || 1, lit = dd <= 3 ? (nx * -0.7 + ny * -0.7) / nl * (dd === 1 ? 1 : dd === 2 ? 0.6 : 0.3) : 0;
+          let k = 0.9 + 0.38 * lit + 0.04 * Math.min(dd, 4) + (1 - y / h) * 0.18 - 0.1;
+          if (wet) k *= 0.86 + 0.28 * noise(x + 7, y + 3);                 // foltos, élő bőr / nyálka
+          if (((x * 7 + y * 13) % 5) === 0) k *= 0.86;                    // finom pórus-zaj (retro dither)
+          // telítettség-emelés a húson és nyálkán (élénk, de sötét horror-színek)
+          if (wet) { const sb = slime ? 1.28 : 1.18; r = lum + (r - lum) * sb; g = lum + (g - lum) * sb; b = lum + (b - lum) * sb; }
+          r *= k; g *= k; b *= k;
+          // hús-áttetszőség: az árnyékos peremen mélyvörös átszűrődő fény
+          if (flesh && dd === 1 && lit < -0.2) { r = r * 0.95 + 26; g *= 0.55; b *= 0.62; }
+          // erezet a vastagabb húsfelületen
+          if (flesh && dd >= 2 && Math.abs(Math.sin(x * 0.8 + y * 0.35 + noise(x, y) * 5)) < 0.11) { r = r * 0.55 + 18; g *= 0.35; b = b * 0.45 + 8; }
+          // nedves csillanás a fény felőli oldalon
+          if (wet && lit > 0.35 && dd <= 2 && hsh(x, y) < (slime ? 0.26 : 0.17)) { if (slime) { r = 226; g = 255; b = 196; } else { r = 255; g = 214; b = 220; } }
+          else if (!wet && lit > 0.6 && dd === 1 && ((x * 5 + y * 3) % 7) === 0) { r = Math.min(255, r * 1.25 + 30); g = Math.min(255, g * 1.25 + 30); b = Math.min(255, b * 1.25 + 30); }
+          d[p] = r; d[p + 1] = g; d[p + 2] = b;
+        }
+        // 1 px sötét körvonal ott, ahol a rajz nem kapott (olvashatóság sötét háttéren)
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = y * w + x; if (solid(i)) continue;
+          if ((x > 0 && solid(i - 1) && !isK(i - 1)) || (x < w - 1 && solid(i + 1) && !isK(i + 1)) || (y > 0 && solid(i - w) && !isK(i - w)) || (y < h - 1 && solid(i + w) && !isK(i + w))) {
+            const p = i * 4; d[p] = 14; d[p + 1] = 3; d[p + 2] = 8; d[p + 3] = 235;
+          }
+        }
+        sctx.putImageData(img, 0, 0);
+        return s0;
+      }
+
+      function finishSprite(small, sc, organicEyes) {
+        const w = small.width, h = small.height, sctx = small.getContext('2d');
+        if (organicEyes) return scaleSprite(small, sc, shadeOrganic(small, organicEyes));
         const img = sctx.getImageData(0, 0, w, h), d = img.data, s0 = new Uint8ClampedArray(d);
         const isOut = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return true; const i = (y * w + x) * 4; return s0[i + 3] < 40 || (s0[i] < 30 && s0[i + 1] < 14 && s0[i + 2] < 24); };
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -1829,6 +1882,11 @@ canvas#gameCanvas{cursor:crosshair}
           else { d[i] = Math.min(255, s0[i] * k); d[i + 1] = Math.min(255, s0[i + 1] * k); d[i + 2] = Math.min(255, s0[i + 2] * k); }
         }
         sctx.putImageData(img, 0, 0);
+        return scaleSprite(small, sc, s0);
+      }
+
+      function scaleSprite(small, sc, s0) {
+        const w = small.width, h = small.height;
         const out = document.createElement('canvas');
         out.width = w * sc; out.height = h * sc;
         const o = out.getContext('2d'); o.imageSmoothingEnabled = false;
@@ -2312,7 +2370,7 @@ canvas#gameCanvas{cursor:crosshair}
             L(9, 10, 12, 7, 1, '#2a1d16', false); P(10, 9, '#2a1d16');
           }
         }
-        const fin = finishSprite(pen.cv, sc);
+        const fin = finishSprite(pen.cv, sc, pen.eyes);
         fin.eyes = pen.eyes.map(([x, y, col, sz]) => [x * sc, y * sc, col, Math.max(2, sz * sc * 0.75)]);
         spriteCache.set(key, fin);
         return fin;
@@ -3611,6 +3669,11 @@ canvas#gameCanvas{cursor:crosshair}
             e.x -= e.speed * mult * sm * dt;
             e.y = clampEnemyY(e, e.y + e.vy * dt * (e.stun > 0 ? 0 : 1));
           }
+          // v17: nyál / nyálka csöpög a pofából (ritka, csak könnyű terhelésnél)
+          if (!state.heavy && e._eyes && e._eyes.length && Math.random() < dt * 0.7 && state.particles.length < pCap() * 0.6) {
+            const q = e._eyes[0];
+            state.particles.push({ x: q[0] + (Math.random() - 0.5) * 4, y: q[1] + 4 + q[3] * 2, vx: (Math.random() - 0.5) * 6, vy: 8, life: 0.7, maxLife: 0.7, color: Math.random() < 0.5 ? bloodOf(e) : '#c8d88a', size: 2, gravity: 320, glow: false });
+          }
           if (e.hp < e.maxHp * 0.6 && Math.random() < dt * (state.heavy ? 0.5 : 3)) addDecal(e.x + (Math.random() - 0.5) * 8, e.y + e.foot * 0.85, bloodOf(e), 5);
 
           if (e.hp > 0 && Math.hypot(e.x - state.player.x, e.y - state.player.y) < e.radius + 16) {
@@ -4133,9 +4196,10 @@ canvas#gameCanvas{cursor:crosshair}
         for (const e of state.enemies) {
           if (!e._eyes || e.hp <= 0) continue;
           if (Math.sin(state.time * 1.3 + e.seed * 5) > 0.985) continue;
+          const eb = state.heavy ? eyeBoost : eyeBoost * (0.7 + 0.5 * Math.sin(state.time * 3.2 + e.seed * 4)); // v17: lüktető szemfény
           for (const [ex, ey, col, s] of e._eyes) {
             ctx.fillStyle = col;
-            if (!state.heavy || state.blackout > 0) { ctx.globalAlpha = eyeBoost; ctx.fillRect(ex - s * 1.6, ey - s * 1.2, s * 3.2, s * 2.4); ctx.globalAlpha = 1; }
+            if (!state.heavy || state.blackout > 0) { ctx.globalAlpha = eb; ctx.fillRect(ex - s * 1.6, ey - s * 1.2, s * 3.2, s * 2.4); ctx.globalAlpha = 1; }
             ctx.fillRect(ex - s / 2, ey - s / 2, s, s);
           }
         }
@@ -4445,6 +4509,9 @@ canvas#gameCanvas{cursor:crosshair}
         let alpha = Math.min(1, e.age * 2.5);
         if (e.typeKey === 'wraith') alpha *= e.lit ? 0.95 : 0.5 + 0.2 * Math.sin(state.time * 9 + e.seed);
         ctx.globalAlpha = alpha;
+        // v17: élő testtartás – enyhe előredőlés a menetirányba + lépés-ritmusú imbolygás (csak könnyű terhelésnél, egy transzform)
+        const footY = dy + dh, lean = state.heavy || e.stun > 0 || e.isBoss ? 0 : 0.05 + 0.03 * Math.sin(e.animTimer * Math.PI * 0.5 + e.seed);
+        if (lean) { ctx.save(); ctx.transform(1, 0, lean, 1, -lean * footY, 0); }
         ctx.drawImage(sp, dx, dy, sp.width, dh);
         if (state.heavy) { // v13: nagy tömegnél szörnyenként legfeljebb egy állapot-réteg (villanás > égés > bénulás > fagy > sav)
           const ov = e.hitFlash > 0 ? '#ffffff' : e.burn > 0 ? '#ff7a1a' : e.stun > 0 ? '#c7d2fe' : e.slow > 0 ? '#9be7ff' : e.acid > 0 ? '#a3e635' : e.enraged ? '#ff0011' : null;
@@ -4464,10 +4531,11 @@ canvas#gameCanvas{cursor:crosshair}
           ctx.fillStyle = '#d02a3a'; ctx.fillRect(dx + sp.width * 0.4 + 1, dy + sp.height * 0.45 + 1, 4, 3);
           if (e.hp < e.maxHp * 0.25) { ctx.fillStyle = '#7a0f1c'; ctx.fillRect(dx + sp.width * 0.6, dy + sp.height * 0.3, 6, 7); ctx.fillStyle = '#e8dcc4'; ctx.fillRect(dx + sp.width * 0.6 + 1, dy + sp.height * 0.3 + 2, 3, 1); }
         }
+        if (lean) ctx.restore();
         if (e.typeKey === 'wraith' && !e.lit) e._eyes = null;
         else {
           const E = e._eyes || (e._eyes = []); E.length = sp.eyes.length;
-          for (let i = 0; i < sp.eyes.length; i++) { const q = sp.eyes[i], o = E[i] || (E[i] = [0, 0, '', 0]); o[0] = dx + q[0]; o[1] = dy + q[1] * br; o[2] = q[2]; o[3] = q[3]; }
+          for (let i = 0; i < sp.eyes.length; i++) { const q = sp.eyes[i], o = E[i] || (E[i] = [0, 0, '', 0]); o[1] = dy + q[1] * br; o[0] = dx + q[0] + lean * (o[1] - footY); o[2] = q[2]; o[3] = q[3]; }
         }
         if (!e.isBoss && e.hp < e.maxHp) {
           const bw = Math.max(22, e.hw * 1.2), ratio = Math.max(0, e.hp / e.maxHp);
