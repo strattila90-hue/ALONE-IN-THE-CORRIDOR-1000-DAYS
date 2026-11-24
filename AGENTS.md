@@ -11,7 +11,7 @@ The current version is the owner's **accepted baseline**. You may change it **on
 - **Gore:** blood, slime, flesh chunks (gibs that bounce and stay on the floor), blood decals.
 - **Monsters:** drawn from horror references – long limbs, exposed ribs, exposed brain, human–monster hybrids (skull faces, faceless, brain-frog, skull-millipede boss).
 - **Gameplay:** left-to-right defense behind a barricade, waves + boss every 5th wave, credits, armor/exosuit tiers, many weapons.
-- **UI:** metal/rust panels, stepped pixel corners, chunky pixel buttons, hazard-stripe fire button. Hungarian language.
+- **UI:** metal/rust panels, big rounded vivid buttons with hand-drawn SVG icons (owner request, v17), hazard stripes. Hungarian language.
 - **Platform:** landscape mobile-first PWA, offline (service worker), PWABuilder/APK compatible, plus a laptop/desktop layout.
 
 ## Hard rules
@@ -48,3 +48,6 @@ The current version is the owner's **accepted baseline**. You may change it **on
 
 ## Ideas that fit the direction (welcome)
 Better hero sprite, redrawn barricade, boss animations, more monster hybrids, story screens between waves, custom icon, save/high-score, more gore polish, performance tuning.
+
+- v17 look & feel: **hand-drawn SVG icon sprite** (`#ico-sprite`, `<svg class="ic"><use href="#i-…"/></svg>`, no emoji on buttons), **big rounded vivid buttons** (top bar 54px / 46px on phone, color-coded per function), pad buttons show name + state (AUTO / FEGYVER / GRÁNÁT / ADRENALIN), **press feedback** on every button (press-in, glow ring, short vibration – `v17PressFx`), pause button icon switches ⏸/▶; **organic monster shading** baked once (`shadeOrganic`: rim light, AO, subsurface red, veins, wet specular, outline), walk lean/sway, pulsing eyes, drool drips (all skipped when `state.heavy`)
+- v17 **autonomous test**: `node tests/smoke.mjs` (phone + desktop, start/wave/fire/shop/pause/stress/FPS/errors/HUD button size) – must print `ÖSSZESÍTÉS: PASS` before every merge
