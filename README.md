@@ -42,6 +42,15 @@
   - `ESC`: taktika / bolt menü
 - **Kontroller:** bal kar mozgás, jobb kar célzás, A/RT tűz, LB/RB fegyver, X gránát, Y adrenalin, Start szünet.
 
+## Új kinézet (v17)
+
+- **Saját rajzolt ikonok** minden gombon (SVG, offline), emoji helyett.
+- **Nagy, lekerekített, élénk színű gombok**: felül 54 px (telefonon 46 px), funkció szerint színezve: bolt narancs, hang türkiz, szünet lila, frissítés zöld, hibakereső rózsaszín.
+- **Egyértelműbb vezérlés**: a bal oldali gombokon név és állapot is látszik (AUTO BE/KI, FEGYVER, GRÁNÁT KÉSZ, ADRENALIN %), a szünet gomb ikonja ▶-ra vált.
+- **Reagáló gombok**: minden gomb benyomódik, felvillan egy fénygyűrű, és rövid rezgést ad.
+- **Élethűbb szörnyek**: térhatású árnyékolás, nedves fények, erezet, áttetsző vörös hús, járás közbeni dőlés, lüktető szemek és csorgó nyál. 300+ szörnynél is 60 FPS.
+- **Önálló teszt**: `node tests/smoke.mjs` (lásd `tests/README.md`).
+
 ## Fegyverek, páncélok, fejlesztések (v16)
 
 - **26 fegyver** – 10 új, filmes fegyver: Kézi Ágyú Revolver, Dobtáras Harci Sörétes, Sárkánylehelet Sörétes (gyújtósörét), Vöröslézer Gatling, Bálnavadász Szigonyágyú (láncos szigony, 6 átütés), Négycsövű Rakétaraj (4 önirányító rakéta), Ionvihar Projektor (10-es villámlánc), Kazettás Pokolakna (6 kisbomba), Nap-Lándzsa Orbitális Lézer (széles aranysugár), Antianyag Megsemmisítő (óriás vonzó gömb).
